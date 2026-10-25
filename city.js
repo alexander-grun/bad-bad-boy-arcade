@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+export const CITY_STOREY_HEIGHT = 1.15;
+
 // A small, walkable Nordic neighbourhood. Dimensions are in game metres.
 export function createCity(scene) {
   const colliders = [];
@@ -102,13 +104,13 @@ export function createCity(scene) {
     for (const side of [-1, 1]) {
       for (let row = 0; row < floors; row++) for (let col = 0; col < columns; col++) {
         const wx = x + (col - (columns - 1) / 2) * 1.15;
-        const wy = 0.85 + row * 1.15;
+        const wy = 0.85 + row * CITY_STOREY_HEIGHT;
         part('box', '#e2d7bd', wx, wy, z + side * (d / 2 + 0.025), 0.67, 0.85, 0.07);
         part('box', random() > 0.42 ? '#edce87' : '#536f79', wx, wy, z + side * (d / 2 + 0.07), 0.49, 0.66, 0.05, 0, true);
         part('box', '#c8bfa8', wx, wy, z + side * (d / 2 + 0.11), 0.04, 0.67, 0.035);
       }
       for (let row = 0; row < floors; row++) for (let col = 0; col < Math.floor(d / 1.3); col++) {
-        part('box', '#dfcda3', x + side * (w / 2 + 0.03), 0.85 + row * 1.15, z + (col - (Math.floor(d / 1.3) - 1) / 2) * 1.2, 0.07, 0.78, 0.55);
+        part('box', '#dfcda3', x + side * (w / 2 + 0.03), 0.85 + row * CITY_STOREY_HEIGHT, z + (col - (Math.floor(d / 1.3) - 1) / 2) * 1.2, 0.07, 0.78, 0.55);
       }
     }
     const front = z + d / 2;

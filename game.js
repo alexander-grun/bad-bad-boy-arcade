@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createHero, animateHero, HERO_BASE_HEIGHT } from './hero.js';
-import { createCity } from './city.js';
+import { createCity, CITY_STOREY_HEIGHT } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 import { createLiquidStream } from './liquid.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb';
-const HERO_HEIGHT = 8.5;
+// Match the map's third-floor windows rather than the sculpture's real size.
+const HERO_HEIGHT = CITY_STOREY_HEIGHT * 3;
 const HERO_SCALE = HERO_HEIGHT / HERO_BASE_HEIGHT;
-const CAMERA_HEIGHT = HERO_HEIGHT + 4.5;
-const CAMERA_DISTANCE = 16;
+const CAMERA_HEIGHT = 10;
+const CAMERA_DISTANCE = 12;
 const CAMERA_LOOK_HEIGHT = HERO_HEIGHT * 0.4;
 const keys = new Set();
 
