@@ -23,3 +23,9 @@ Retain the snail's attribution and licence when distributing the game. These lic
 Bad Bad Boy is a sculpture by Tommi Toija in Helsinki. The game character was prepared from the user-provided `bc222867938641be8050f747614e5d34.glb`; it is not covered by the slime and snail licences above.
 
 The city environment is generated in `city.js`. Three.js: https://threejs.org/ (MIT).
+
+## Included libraries and fonts
+
+- Three.js **0.180.0**, from the official `three@0.180.0` npm package. The included files are unmodified. MIT licence: `vendor/three-0.180.0/LICENSE`.
+- Inter, from `@fontsource-variable/inter@5.3.0`. SIL Open Font License: `vendor/fonts/LICENSE-Inter.txt`.
+- Barlow Condensed, from `@fontsource/barlow-condensed@5.3.0`. SIL Open Font License: `vendor/fonts/LICENSE-Barlow-Condensed.txt`.

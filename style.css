@@ -1,4 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./vendor/fonts/inter-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./vendor/fonts/barlow-condensed-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('./vendor/fonts/barlow-condensed-latin-800-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('./vendor/fonts/barlow-condensed-latin-900-normal.woff2') format('woff2');
+}
+
 
 :root {
   color-scheme: dark;
@@ -13,6 +41,8 @@
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #11131b; }
 body { -webkit-font-smoothing: antialiased; }
 button { font: inherit; }
+[hidden] { display: none !important; }
+#retry-load { margin-top: 10px; }
 
 .game-shell { position: relative; width: 100%; height: 100%; min-height: 420px; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #29263a, #11131b 70%); }
 #game { display: block; width: 100%; height: 100%; outline: 0; }

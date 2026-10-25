@@ -7,15 +7,19 @@ A browser arcade game starring Helsinki's Bad Bad Boy sculpture. The textured ch
 Start a local server from the repository root:
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1
+python3 server.py
 ```
 
-Open [http://localhost:8000/](http://localhost:8000/). No build step or package installation is needed. Three.js loads from jsDelivr, so the first launch requires an internet connection.
+Open [http://localhost:8000/](http://localhost:8000/). No build step or package installation is needed. Three.js and the fonts are included in `vendor/`, so gameplay does not depend on a CDN or an internet connection. You can also start the server with `npm start`. The server always serves fresh application modules to prevent stale code from different versions being mixed.
 
 Controls: `WASD` or arrow keys to run and turn; hold the left mouse button or `Space` to spray. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
 
 The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
 The character stands 8.5 game metres tall, scaling the prepared 1.5-metre model by 8.5 / 1.5. The emitter, collision radius, and liquid thickness match this size. The camera frames his full height, and the running animation follows the distance travelled with a stride proportional to his height.
+
+## Loading
+
+The entry point uses one version for all game modules. Startup errors appear above the start button with a retry button instead of leaving the game on an indefinite loading screen. The local server disables caching for JavaScript, HTML, and CSS. A plain static server still works; use the included server during development to keep modules fresh.
 
 ## Liquid stream
 
@@ -33,6 +37,9 @@ Waves contain fast, animated slimes and slower, tougher snails. A slime is worth
 ## Files
 
 - `index.html` and `style.css`: game interface and controls.
+- `bootstrap.js`: startup, timeout handling, and visible loading errors.
+- `server.py`: local server with fresh application modules.
+- `vendor/`: pinned Three.js modules and local fonts with their licences.
 - `game.js`: movement, waves, damage, and input.
 - `city.js`: environment, collisions, and navigation.
 - `liquid.js`: ballistic liquid simulation, fluid surface, droplets, splashes, and hit detection.

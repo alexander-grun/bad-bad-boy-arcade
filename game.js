@@ -99,7 +99,9 @@ async function loadModels() {
   try {
     status.textContent = 'Loading the hero, slimes, and snails…';
     const [gltf] = await Promise.all([
-      new GLTFLoader().loadAsync(MODEL_URL),
+      new GLTFLoader().loadAsync(MODEL_URL, event => {
+        if (event.lengthComputable) status.textContent = `Loading the hero… ${Math.round(event.loaded / event.total * 100)}%`;
+      }),
       loadEnemyModels(),
     ]);
     player.rig = createHero(gltf.scene);
@@ -109,9 +111,11 @@ async function loadModels() {
     status.classList.add('hidden');
     startButton.disabled = false;
     startButton.textContent = 'START GAME';
+    window.dispatchEvent(new Event('game:ready'));
   } catch (error) {
     console.error('Could not load game models:', error);
     status.textContent = 'Could not load the models. Start the local server, then refresh the page.';
+    window.dispatchEvent(new CustomEvent('game:load-error', { detail: error }));
   }
 }
 
