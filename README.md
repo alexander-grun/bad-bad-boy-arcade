@@ -2,6 +2,12 @@
 
 A browser arcade game starring Helsinki's Bad Bad Boy sculpture. The textured character model is included in the repository: `assets/bad-bad-boy.glb`.
 
+## Play online
+
+[Play Golden Blast](https://bekharsky.github.io/bad-bad-boy-arcade/)
+
+GitHub Pages publishes the repository root from the `bekharsky/arcade` branch. Pushing updates to this branch updates the live game. The `.nojekyll` file serves the game and its bundled assets directly without Jekyll processing.
+
 ## Run locally
 
 Start a local server from the repository root:
