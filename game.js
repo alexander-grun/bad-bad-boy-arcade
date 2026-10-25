@@ -5,7 +5,7 @@ import { createCity, CITY_STOREY_HEIGHT } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 import { createLiquidStream } from './liquid.js';
 
-const MODEL_URL = './assets/bad-bad-boy.glb';
+const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
 const HERO_HEIGHT = CITY_STOREY_HEIGHT * 3;
 const HERO_SCALE = HERO_HEIGHT / HERO_BASE_HEIGHT;
@@ -102,13 +102,57 @@ let soundEnabled = false;
 let audioContext = null;
 let frameTime = 0;
 
+async function loadHero() {
+  const url = new URL(MODEL_URL, import.meta.url);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Hero download failed: HTTP ${response.status}`);
+  let bytes;
+  if (response.body) {
+    const reader = response.body.getReader();
+    const chunks = [], header = new Uint8Array(12);
+    let loaded = 0, headerLength = 0, total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); loaded += value.byteLength;
+        if (headerLength < header.length) {
+          const part = value.subarray(0, header.length - headerLength);
+          header.set(part, headerLength); headerLength += part.length;
+          if (headerLength === header.length) {
+            const view = new DataView(header.buffer);
+            if (view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2) throw new Error('Invalid hero GLB header');
+            // GLB stores the decoded size. HTTP Content-Length can describe
+            // compressed bytes, while fetch streams already decoded bytes.
+            total = view.getUint32(8, true);
+            if (total < 20) throw new Error('Invalid hero GLB length');
+          }
+        }
+        if (total) {
+          if (loaded > total) throw new Error('Hero GLB exceeds its declared length');
+          const percent = Math.max(0, Math.min(99, Math.floor(loaded / total * 100)));
+          status.textContent = `Loading the hero… ${percent}%`;
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    if (!total || loaded !== total) throw new Error('Hero GLB download is incomplete');
+    bytes = new Uint8Array(loaded);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  } else {
+    bytes = new Uint8Array(await response.arrayBuffer());
+  }
+  status.textContent = 'Preparing the models…';
+  return new GLTFLoader().parseAsync(bytes.buffer, new URL('.', url).href);
+}
+
 async function loadModels() {
   try {
     status.textContent = 'Loading the hero, slimes, and snails…';
     const [gltf] = await Promise.all([
-      new GLTFLoader().loadAsync(MODEL_URL, event => {
-        if (event.lengthComputable) status.textContent = `Loading the hero… ${Math.round(event.loaded / event.total * 100)}%`;
-      }),
+      loadHero(),
       loadEnemyModels(),
     ]);
     player.rig = createHero(gltf.scene);

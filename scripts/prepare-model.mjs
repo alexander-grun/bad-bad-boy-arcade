@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { optimizeHero } from './optimize-model.mjs';
 
 const input = process.argv[2];
 if (!input) throw new Error('Usage: npm run prepare-model -- /path/to/bc222867938641be8050f747614e5d34.glb');
@@ -139,5 +140,6 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUIn
 header.writeUInt32LE(json.length, 12); header.writeUInt32LE(0x4e4f534a, 16);
 binHeader.writeUInt32LE(bin.length, 0); binHeader.writeUInt32LE(0x004e4942, 4);
 await fs.mkdir(path.dirname(output), { recursive: true });
-await fs.writeFile(output, Buffer.concat([header, json, binHeader, bin]));
-console.log({ output, vertices: pOut.length / 3, triangles: kept.length / 3, componentsRemoved: sizes.size - 1, bytes: 28 + json.length + bin.length });
+const optimized = await optimizeHero(Buffer.concat([header, json, binHeader, bin]));
+await fs.writeFile(output, optimized.bytes);
+console.log({ output, ...optimized.stats, componentsRemoved: sizes.size - 1, bytes: optimized.bytes.length });

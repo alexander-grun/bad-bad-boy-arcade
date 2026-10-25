@@ -27,7 +27,7 @@ The character reaches the third-floor windows of the map's buildings. His height
 
 ## Loading
 
-The entry point uses one version for all game modules. Startup errors appear above the start button with a retry button instead of leaving the game on an indefinite loading screen. The local server disables caching for JavaScript, HTML, and CSS. A plain static server still works; use the included server during development to keep modules fresh.
+The entry point uses one version for all game modules. Hero download progress uses the decoded file size from the GLB header, so HTTP compression cannot push it above 100%. The counter stops at 99% during transfer, then shows “Preparing the models…” until all models and the hero rig are ready. Startup errors appear above the start button with a retry button instead of leaving the game on an indefinite loading screen. The local server disables caching for JavaScript, HTML, and CSS. A plain static server still works; use the included server during development to keep modules fresh.
 
 ## Liquid stream
 
@@ -55,13 +55,14 @@ Waves contain fast, animated slimes and slower, tougher snails. A slime is worth
 - `liquid.js`: ballistic liquid simulation, fluid surface, droplets, splashes, and hit detection.
 - `enemies.js`: loading and animating the slime and snail models.
 - `hero.js`: character rig, animation, and stream emitter.
-- `assets/bad-bad-boy.glb`: character without its stand, with UVs and a 2048 × 2048 colour atlas.
+- `assets/bad-bad-boy.glb`: character without its stand: 30,000 triangles, 21,052 vertices, preserved UVs and a 1024 × 1024 JPEG colour atlas (1,015,852 bytes total).
 - `assets/enemies/`: original enemy GLBs with materials and animations.
 - `scripts/prepare-model.mjs`: prepare the game GLB from the source model.
+- `scripts/optimize-model.mjs`: simplify geometry with meshoptimizer, reorder the vertex cache, compact vertex streams, use 16-bit indices, and encode the texture with Sharp.
 
 ## Prepare the character model
 
-The game model was derived from `bc222867938641be8050f747614e5d34.glb`. The source file incorrectly assigns its 8000 × 8000 colour atlas as a normal map. The preparation script reassigns it to base colour, resizes it to 2048 × 2048, preserves UVs and normals, removes the stand and separate plane, and aligns the model for its skeleton.
+The game model was derived from `bc222867938641be8050f747614e5d34.glb`. The source file incorrectly assigns its 8000 × 8000 colour atlas as a normal map. The preparation script reassigns it to base colour, removes the stand and separate plane, and aligns the model for its skeleton. It then automatically optimizes the result: 305,625 → 30,000 triangles, 183,001 → 21,052 vertices, and a 1024 × 1024 JPEG atlas instead of the intermediate 2048 × 2048 PNG. This reduces the game GLB from 18,326,612 to 1,015,852 bytes (94.5% smaller). UVs and normals are retained; simplification also accounts for hip, knee, and ankle weight transitions. The material, skeleton coordinate frame, and stream origin stay compatible with the game. The output is a standard GLB with no runtime compression decoder required.
 
 To prepare it again, install Node.js and the development dependencies:
 

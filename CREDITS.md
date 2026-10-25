@@ -29,3 +29,7 @@ The city environment is generated in `city.js`. Three.js: https://threejs.org/ (
 - Three.js **0.180.0**, from the official `three@0.180.0` npm package. The included files are unmodified. MIT licence: `vendor/three-0.180.0/LICENSE`.
 - Inter, from `@fontsource-variable/inter@5.3.0`. SIL Open Font License: `vendor/fonts/LICENSE-Inter.txt`.
 - Barlow Condensed, from `@fontsource/barlow-condensed@5.3.0`. SIL Open Font License: `vendor/fonts/LICENSE-Barlow-Condensed.txt`.
+
+## Asset preparation tools
+
+Uses meshoptimizer 1.3.0. Copyright (c) 2016–2026, Arseny Kapoulkine (MIT). Used offline to simplify and reorder the hero mesh; no decoder is required by the game. Texture preparation uses Sharp 0.34.5 (Apache-2.0).

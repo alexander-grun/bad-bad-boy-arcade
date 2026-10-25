@@ -8,6 +8,7 @@
     "prepare-model": "node scripts/prepare-model.mjs"
   },
   "devDependencies": {
+    "meshoptimizer": "1.3.0",
     "sharp": "0.34.5"
   }
 }
