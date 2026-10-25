@@ -3,10 +3,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createHero, animateHero } from './hero.js';
 import { createCity } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
+import { createLiquidStream } from './liquid.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb';
 const keys = new Set();
-const STREAM_LENGTH = 1.9;
 
 const canvas = document.querySelector('#game');
 const status = document.querySelector('#load-status');
@@ -70,17 +70,13 @@ const player = {
 player.root.add(player.body);
 scene.add(player.root);
 
-const streamOrigin = new THREE.Vector3();
-const streamDirection = new THREE.Vector3();
-const streamAxis = new THREE.Vector3();
-const worldUp = new THREE.Vector3(0, 1, 0);
-const stream = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.009, 0.027, 1, 10, 1, true),
-  new THREE.MeshBasicMaterial({ color: '#ffe56d', transparent: true, opacity: 0.82, side: THREE.DoubleSide, depthWrite: false })
-);
-stream.visible = false;
-stream.renderOrder = 2;
-scene.add(stream);
+const stream = createLiquidStream(scene, city, (enemy, direction) => {
+  enemy.hp -= 2;
+  enemy.hit = 0.18;
+  city.move(enemy, direction.x * 0.38, direction.z * 0.38, enemy.size);
+  enemy.root.position.set(enemy.x, 0, enemy.z);
+  if (enemy.hp <= 0) removeEnemy(enemy, true);
+});
 
 const enemies = [];
 const effects = [];
@@ -143,53 +139,6 @@ function removeEnemy(enemy, pop = false) {
     burst(enemy.x, enemy.hitHeight, enemy.z, 0xffd34e, 10);
     blip(440 + Math.random() * 280, 0.045);
   }
-}
-
-function updateStream(firing) {
-  stream.visible = firing;
-  if (!firing) return;
-  player.rig.emitter.getWorldPosition(streamOrigin);
-  streamDirection.set(player.dx, 0, player.dz).normalize();
-  let reach = STREAM_LENGTH;
-  while (reach > 0.1 && !city.lineClear(streamOrigin.x, streamOrigin.z, streamOrigin.x + streamDirection.x * reach, streamOrigin.z + streamDirection.z * reach, 0)) reach -= 0.1;
-  streamAxis.copy(streamDirection).multiplyScalar(reach);
-  streamAxis.y = -0.09;
-  stream.position.copy(streamOrigin).addScaledVector(streamAxis, 0.5);
-  stream.scale.y = streamAxis.length();
-  stream.quaternion.setFromUnitVectors(worldUp, streamAxis.clone().normalize());
-  stream.material.opacity = 0.78 + Math.sin(gameTime * 32) * 0.06;
-}
-
-function shoot() {
-  const dir = streamDirection;
-  const origin = streamOrigin;
-  const ray = streamAxis.clone().normalize();
-  const length = streamAxis.length();
-  for (const enemy of enemies) {
-    if (!enemy.alive) continue;
-    const target = new THREE.Vector3(enemy.x, enemy.hitHeight, enemy.z);
-    const relative = target.clone().sub(origin);
-    const along = relative.dot(ray);
-    if (along < 0.1 || along > length + enemy.size * 0.5) continue;
-    const closest = origin.clone().addScaledVector(ray, along);
-    if (closest.distanceTo(target) > enemy.size + 0.13) continue;
-    if (!city.lineClear(origin.x, origin.z, enemy.x, enemy.z, 0)) continue;
-    enemy.hp--;
-    enemy.hit = 0.14;
-    city.move(enemy, dir.x * 0.23, dir.z * 0.23, enemy.size);
-    enemy.root.position.set(enemy.x, 0, enemy.z);
-    if (enemy.hp <= 0) removeEnemy(enemy, true);
-    else {
-      const impact = new THREE.Mesh(
-        new THREE.SphereGeometry(0.055, 8, 6),
-        new THREE.MeshBasicMaterial({ color: '#fff19a', transparent: true, opacity: 0.85 })
-      );
-      impact.position.copy(target);
-      scene.add(impact);
-      effects.push({ object: impact, velocity: new THREE.Vector3(), life: 0.1, maxLife: 0.1 });
-    }
-  }
-  blip(210 + Math.random() * 60, 0.025);
 }
 
 function burst(x, y, z, color, count = 8, forward = null) {
@@ -256,12 +205,12 @@ function update(dt) {
   animateHero(player.rig, player.runTime, player.runBlend);
 
   const firing = keys.has('Space') || keys.has('Fire');
-  // Keep the visible stream attached to the hands every frame, including turns.
-  updateStream(firing);
+  // Each parcel starts at the hands, then follows its own ballistic trajectory.
+  stream.update(dt, firing, player.rig.emitter, player, enemies);
   player.fireTimer -= dt;
   if (firing && player.fireTimer <= 0) {
-    shoot();
-    player.fireTimer = 0.12;
+    blip(180 + Math.random() * 35, 0.035);
+    player.fireTimer = 0.1;
   }
 
   city.routeTo(player.x, player.z);
@@ -377,7 +326,7 @@ function startGame() {
 }
 
 function clearArena() {
-  stream.visible = false;
+  stream.clear();
   for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {
     scene.remove(effect.object);
@@ -390,7 +339,7 @@ function clearArena() {
 
 function endGame() {
   playing = false;
-  stream.visible = false;
+  stream.clear();
   finalScore.textContent = String(score).padStart(4, '0');
   endScreen.classList.remove('hidden');
   blip(80, 0.25);
