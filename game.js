@@ -5,6 +5,7 @@ import { createCity, CITY_STOREY_HEIGHT } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 import { createLiquidStream } from './liquid.js';
 import { createBiteEffects } from './bites.js';
+import { createMedkits } from './medkits.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
@@ -95,6 +96,7 @@ const stream = createLiquidStream(scene, city, (enemy, direction) => {
 const enemies = [];
 const effects = [];
 const biteEffects = createBiteEffects(scene);
+const medkits = createMedkits(scene, city);
 let playing = false;
 let gameTime = 0;
 let score = 0;
@@ -326,6 +328,7 @@ function update(dt) {
   player.body.rotation.z = Math.cos(player.runTime) * 0.025 * player.runBlend;
   player.body.rotation.x = 0.07 * player.runBlend * THREE.MathUtils.clamp(player.moveSpeed / player.speed, -1, 1);
   animateHero(player.rig, player.runTime, player.runBlend);
+  medkits.update(dt, player, collectMedkit);
 
   player.tapTimer = Math.max(0, player.tapTimer - dt);
   // Each parcel starts at the hands, then follows its own ballistic trajectory.
@@ -420,6 +423,13 @@ function updateHealth() {
   healthFill.style.background = ratio < 0.4 ? 'linear-gradient(90deg, #f04559, #ff7952)' : 'linear-gradient(90deg, #ff8b54, #ffd34e)';
 }
 
+function collectMedkit(amount) {
+  player.hp = Math.min(player.maxHp, player.hp + amount);
+  updateHealth();
+  showToast(`HEALTH +${amount}`);
+  blip(740, .12);
+}
+
 function startGame() {
   if (!player.model) return;
   clearArena();
@@ -448,6 +458,7 @@ function startGame() {
   animateHero(player.rig, 0, 0);
   scoreLabel.textContent = '0000';
   updateHealth();
+  medkits.reset(player);
   spawnWave(1);
   playing = true;
   startScreen.classList.add('hidden');
@@ -458,6 +469,7 @@ function startGame() {
 function clearArena() {
   stream.clear();
   biteEffects.clear();
+  medkits.clear();
   player.tapTimer = 0;
   for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {

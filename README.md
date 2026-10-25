@@ -46,6 +46,8 @@ Waves contain fast, animated slimes and slower, tougher snails. A slime is worth
 
 Successful enemy bites emit a red splash from the animated shin nearest the attacker. Eighteen droplets fly outward, fall, flatten briefly on the pavement, and shrink away. The effect triggers only when health is lost, continues after a fatal bite, and resets when restarting. A shared instanced mesh caps the droplets at 64 and renders them in one draw call.
 
+Five medkits are scattered across the square and the four main streets each round. Look for floating white cases with green crosses and a green ground ring. Walk over one to restore up to two health points. They remain available at full health, are consumed once per round, and return when restarting. Placement leaves clearance for the player; pickups require a clear path. All five kits share three instanced meshes.
+
 ## Files
 
 - `index.html` and `style.css`: game interface and controls.
@@ -58,6 +60,7 @@ Successful enemy bites emit a red splash from the animated shin nearest the atta
 - `enemies.js`: loading and animating the slime and snail models.
 - `hero.js`: character rig, animation, and stream emitter.
 - `bites.js`: red droplets marking damaging snail and slime bites.
+- `medkits.js`: collectible health kits, street placement, and pickup handling.
 - `assets/bad-bad-boy.glb`: character without its stand: 30,000 triangles, 21,052 vertices, preserved UVs and a 1024 × 1024 JPEG colour atlas (1,015,852 bytes total).
 - `assets/enemies/`: original enemy GLBs with materials and animations.
 - `scripts/prepare-model.mjs`: prepare the game GLB from the source model.

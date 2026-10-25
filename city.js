@@ -330,5 +330,5 @@ export function createCity(scene) {
     for (let i = 0; i < cells; i++) if (distances[i] >= 5 && distances[i] <= 12) return coords(i);
     return { x: 0, z: 4 };
   }
-  return { move, routeTo, chase, spawnPoint, lineClear, lineClear3D, updateVisibility };
+  return { move, routeTo, chase, spawnPoint, lineClear, lineClear3D, updateVisibility, canStandAt: (x, z, radius) => !blocked(x, z, radius) };
 }
