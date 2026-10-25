@@ -44,6 +44,8 @@ Buildings smoothly fade to 12% opacity when they overlap the character's feet, b
 
 Waves contain fast, animated slimes and slower, tougher snails. A slime is worth 100 points; a snail is worth 150. Both enemy models are free and openly licensed: Slime by Quaternius (CC0) and Snail by Poly by Google (CC BY 3.0). Sources, licences, and modifications are listed in [CREDITS.md](./CREDITS.md) and the in-game Models & credits page.
 
+Successful enemy bites emit a red splash from the animated shin nearest the attacker. Eighteen droplets fly outward, fall, flatten briefly on the pavement, and shrink away. The effect triggers only when health is lost, continues after a fatal bite, and resets when restarting. A shared instanced mesh caps the droplets at 64 and renders them in one draw call.
+
 ## Files
 
 - `index.html` and `style.css`: game interface and controls.
@@ -55,6 +57,7 @@ Waves contain fast, animated slimes and slower, tougher snails. A slime is worth
 - `liquid.js`: ballistic liquid simulation, fluid surface, droplets, splashes, and hit detection.
 - `enemies.js`: loading and animating the slime and snail models.
 - `hero.js`: character rig, animation, and stream emitter.
+- `bites.js`: red droplets marking damaging snail and slime bites.
 - `assets/bad-bad-boy.glb`: character without its stand: 30,000 triangles, 21,052 vertices, preserved UVs and a 1024 × 1024 JPEG colour atlas (1,015,852 bytes total).
 - `assets/enemies/`: original enemy GLBs with materials and animations.
 - `scripts/prepare-model.mjs`: prepare the game GLB from the source model.

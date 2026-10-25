@@ -4,6 +4,7 @@ import { createHero, animateHero, HERO_BASE_HEIGHT } from './hero.js';
 import { createCity, CITY_STOREY_HEIGHT } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 import { createLiquidStream } from './liquid.js';
+import { createBiteEffects } from './bites.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
@@ -93,6 +94,7 @@ const stream = createLiquidStream(scene, city, (enemy, direction) => {
 
 const enemies = [];
 const effects = [];
+const biteEffects = createBiteEffects(scene);
 let playing = false;
 let gameTime = 0;
 let score = 0;
@@ -217,6 +219,27 @@ function burst(x, y, z, color, count = 8, forward = null) {
   }
 }
 
+function showBite(enemy) {
+  const attacker = new THREE.Vector3(enemy.x, THREE.MathUtils.clamp(enemy.hitHeight, .18, .48), enemy.z);
+  const contact = new THREE.Vector3();
+  let nearest = Infinity;
+  // Use the animated shin closest to the attacker, including during a stride.
+  for (const leg of player.rig.legs) {
+    const ankle = leg.ankle.getWorldPosition(new THREE.Vector3());
+    const knee = leg.knee.getWorldPosition(new THREE.Vector3());
+    const height = knee.y - ankle.y;
+    const t = Math.abs(height) > .001 ? THREE.MathUtils.clamp((attacker.y - ankle.y) / height, 0, 1) : 0;
+    const point = ankle.lerp(knee, t);
+    const distance = point.distanceToSquared(attacker);
+    if (distance < nearest) { nearest = distance; contact.copy(point); }
+  }
+  const outward = new THREE.Vector3(attacker.x - contact.x, 0, attacker.z - contact.z);
+  if (outward.lengthSq() < .0001) outward.set(-player.dx, 0, -player.dz);
+  outward.normalize();
+  contact.addScaledVector(outward, .055 * HERO_SCALE);
+  biteEffects.burst(contact, outward, HERO_SCALE);
+}
+
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add('visible');
@@ -290,6 +313,8 @@ function updateMovement(dt, firing) {
 
 function update(dt) {
   gameTime += dt;
+  // Finish the final bite's splash even after the round ends.
+  biteEffects.update(dt);
   if (!playing) return;
 
   const firing = keys.has('Space') || keys.has('Fire') || player.tapTimer > 0;
@@ -347,7 +372,7 @@ function update(dt) {
       player.invulnerable = 0.85;
       enemy.attack = enemy.kind === 'snail' ? 1.2 : 0.85;
       updateHealth();
-      burst(player.x, 0.35, player.z, 0xff6681, 5);
+      showBite(enemy);
       blip(115, 0.12);
       if (player.hp <= 0) endGame();
     }
@@ -432,6 +457,7 @@ function startGame() {
 
 function clearArena() {
   stream.clear();
+  biteEffects.clear();
   player.tapTimer = 0;
   for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {
