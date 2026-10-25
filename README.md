@@ -15,6 +15,7 @@ Open [http://localhost:8000/](http://localhost:8000/). No build step or package 
 Controls: `WASD` or arrow keys to run and turn; hold the left mouse button or `Space` to spray. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
 
 The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
+The character is displayed at 1.5 times the prepared model's size, with the emitter and collision radius scaled to match.
 
 ## Liquid stream
 
@@ -25,6 +26,7 @@ Liquid already in flight keeps its own trajectory when the character turns. Rele
 ## City and enemies
 
 The game takes place in a small neighbourhood with a cobbled square, pedestrian crossings, tram tracks, cafes, trees, and parked cars. Buildings and street furniture have collision boundaries. Enemies navigate around obstacles using a shared navigation grid. The stream cannot pass through obstacles.
+Buildings smoothly fade to 12% opacity when they overlap the character's feet, body, shoulders, or head along the camera's line of sight. Walls, roofs, windows, and signs fade together and return to full opacity once the view is clear.
 
 Waves contain fast, animated slimes and slower, tougher snails. A slime is worth 100 points; a snail is worth 150. Both enemy models are free and openly licensed: Slime by Quaternius (CC0) and Snail by Poly by Google (CC BY 3.0). Sources, licences, and modifications are listed in [CREDITS.md](./CREDITS.md) and the in-game Models & credits page.
 

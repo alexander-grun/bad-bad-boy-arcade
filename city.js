@@ -4,6 +4,8 @@ import * as THREE from 'three';
 export function createCity(scene) {
   const colliders = [];
   const batches = new Map();
+  const buildings = [];
+  let activeBuilding = null;
   const geometries = {
     box: new THREE.BoxGeometry(1, 1, 1),
     cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 10),
@@ -13,9 +15,11 @@ export function createCity(scene) {
   let seed = 37;
   const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
   function part(shape, color, x, y, z, sx, sy, sz, ry = 0, glow = false) {
+    const target = activeBuilding?.batches ?? batches;
+    if (activeBuilding) { x -= activeBuilding.x; z -= activeBuilding.z; }
     const key = `${shape}:${color}:${glow}`;
-    if (!batches.has(key)) batches.set(key, { shape, color, glow, transforms: [] });
-    batches.get(key).transforms.push([x, y, z, sx, sy, sz, ry]);
+    if (!target.has(key)) target.set(key, { shape, color, glow, transforms: [] });
+    target.get(key).transforms.push([x, y, z, sx, sy, sz, ry]);
   }
   function obstacle(x, z, w, d) {
     colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
@@ -72,12 +76,20 @@ export function createCity(scene) {
     g.fillStyle = '#fff0c2'; g.font = 'bold 43px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 50);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 96 / 512), new THREE.MeshStandardMaterial({ map: t, roughness: 0.8 }));
-    mesh.position.set(x, y, z); scene.add(mesh);
+    mesh.position.set(x - (activeBuilding?.x ?? 0), y, z - (activeBuilding?.z ?? 0));
+    (activeBuilding?.group ?? scene).add(mesh);
+    if (activeBuilding) { activeBuilding.materials.push(mesh.material); activeBuilding.meshes.push(mesh); }
     return mesh;
   }
   const colors = ['#cd9a7f', '#d5c590', '#8fa9a4', '#ceb7a4', '#b38b84', '#a6b2be'];
   let buildingIndex = 0;
   function building(x, z, w, d, h) {
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    activeBuilding = {
+      group, x, z, batches: new Map(), materials: [], meshes: [], opacity: 1, hiddenUntil: 0,
+      bounds: new THREE.Box3(),
+    };
     const color = colors[buildingIndex++ % colors.length];
     obstacle(x, z, w + 0.12, d + 0.12);
     part('box', color, x, h / 2, z, w, h, d);
@@ -105,6 +117,9 @@ export function createCity(scene) {
       part('box', '#385f5a', x, 1.3, front + 0.45, w * 0.75, 0.18, 0.9);
       sign(['CAFE', 'KIOSK', 'BAKERY'][Math.floor(buildingIndex / 3) % 3], x, 1.65, front + 0.12, w * 0.7);
     }
+    buildings.push(activeBuilding);
+    scene.add(group);
+    activeBuilding = null;
   }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     building(sx * 10.2, sz * 10, 4.5, 4.7, 3.5 + random() * 1.7);
@@ -163,6 +178,87 @@ export function createCity(scene) {
     });
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.computeBoundingSphere(); scene.add(mesh);
+  }
+
+  // Merge each house into a few coloured meshes, so it can fade independently
+  // without adding a draw call for every window or affecting other houses.
+  const position = new THREE.Vector3(), vertexNormal = new THREE.Vector3();
+  const normalMatrix = new THREE.Matrix3();
+  for (const house of buildings) {
+    for (const glow of [false, true]) {
+      const parts = [...house.batches.values()].filter(batch => batch.glow === glow);
+      const vertexCount = parts.reduce((count, batch) => count + geometries[batch.shape].attributes.position.count * batch.transforms.length, 0);
+      const indexCount = parts.reduce((count, batch) => count + geometries[batch.shape].index.count * batch.transforms.length, 0);
+      if (!vertexCount) continue;
+      const positions = new Float32Array(vertexCount * 3), normals = new Float32Array(vertexCount * 3), colors = new Float32Array(vertexCount * 3);
+      const indices = new Uint32Array(indexCount);
+      let vertexOffset = 0, indexOffset = 0;
+      for (const batch of parts) {
+        const source = geometries[batch.shape], color = new THREE.Color(batch.color);
+        for (const [x, y, z, sx, sy, sz, ry] of batch.transforms) {
+          dummy.position.set(x, y, z); dummy.scale.set(sx, sy, sz); dummy.rotation.set(0, ry, 0); dummy.updateMatrix();
+          normalMatrix.getNormalMatrix(dummy.matrix);
+          for (let i = 0; i < source.attributes.position.count; i++) {
+            position.fromBufferAttribute(source.attributes.position, i).applyMatrix4(dummy.matrix);
+            vertexNormal.fromBufferAttribute(source.attributes.normal, i).applyNormalMatrix(normalMatrix);
+            const offset = (vertexOffset + i) * 3;
+            position.toArray(positions, offset); vertexNormal.toArray(normals, offset); color.toArray(colors, offset);
+          }
+          for (let i = 0; i < source.index.count; i++) indices[indexOffset++] = vertexOffset + source.index.getX(i);
+          vertexOffset += source.attributes.position.count;
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+      geometry.computeBoundingSphere();
+      const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, emissive: glow ? '#ebce96' : '#000000', emissiveIntensity: glow ? 0.16 : 0 });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = mesh.receiveShadow = true;
+      house.group.add(mesh); house.meshes.push(mesh); house.materials.push(material);
+    }
+    house.batches.clear();
+    house.bounds.setFromObject(house.group).expandByScalar(0.06);
+  }
+
+  const sightRay = new THREE.Ray();
+  const intersection = new THREE.Vector3();
+  const cameraRight = new THREE.Vector3();
+  const heroPosition = new THREE.Vector3();
+  const sightTargets = Array.from({ length: 5 }, () => new THREE.Vector3());
+  let visibilityTime = 0;
+  function updateVisibility(camera, hero, height, dt) {
+    visibilityTime += dt;
+    camera.updateMatrixWorld();
+    hero.getWorldPosition(heroPosition);
+    cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    const samples = [[0, 0.12], [0, 0.5], [0, 0.9], [-0.19, 0.6], [0.19, 0.6]];
+    samples.forEach(([side, y], i) => {
+      sightTargets[i].copy(heroPosition).addScaledVector(cameraRight, side * height);
+      sightTargets[i].y += y * height;
+    });
+    for (const house of buildings) {
+      const occluded = sightTargets.some(target => {
+        sightRay.origin.copy(camera.position);
+        sightRay.direction.copy(target).sub(camera.position).normalize();
+        return sightRay.intersectBox(house.bounds, intersection) !== null && intersection.distanceToSquared(camera.position) < target.distanceToSquared(camera.position) - 0.01;
+      });
+      if (occluded) house.hiddenUntil = visibilityTime + 0.15;
+      const target = occluded || visibilityTime < house.hiddenUntil ? 0.12 : 1;
+      let opacity = THREE.MathUtils.damp(house.opacity, target, 14, dt);
+      if (Math.abs(opacity - target) < 0.003) opacity = target;
+      if (Math.abs(opacity - house.opacity) < 0.00001) continue;
+      house.opacity = opacity;
+      for (const material of house.materials) {
+        const transparent = opacity < 1;
+        if (material.transparent !== transparent) { material.transparent = transparent; material.needsUpdate = true; }
+        material.opacity = opacity;
+        material.depthWrite = !transparent;
+      }
+      for (const mesh of house.meshes) mesh.castShadow = opacity > 0.98;
+    }
   }
 
   const limit = 21.8;
@@ -224,5 +320,5 @@ export function createCity(scene) {
     for (let i = 0; i < cells; i++) if (distances[i] >= 5 && distances[i] <= 12) return coords(i);
     return { x: 0, z: 4 };
   }
-  return { move, routeTo, chase, spawnPoint, lineClear };
+  return { move, routeTo, chase, spawnPoint, lineClear, updateVisibility };
 }

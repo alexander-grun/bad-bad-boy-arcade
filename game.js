@@ -6,6 +6,7 @@ import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enem
 import { createLiquidStream } from './liquid.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb';
+const HERO_SCALE = 1.5;
 const keys = new Set();
 
 const canvas = document.querySelector('#game');
@@ -62,6 +63,7 @@ const player = {
   hp: 5,
   maxHp: 5,
   speed: 3.6,
+  radius: 0.32 * HERO_SCALE,
   invulnerable: 0,
   fireTimer: 0,
   runTime: 0,
@@ -98,6 +100,7 @@ async function loadModels() {
     ]);
     player.rig = createHero(gltf.scene);
     player.model = player.rig.mesh;
+    player.model.scale.setScalar(HERO_SCALE);
     player.body.add(player.model);
     status.classList.add('hidden');
     startButton.disabled = false;
@@ -189,7 +192,7 @@ function update(dt) {
     const vx = xAxis / length;
     const vz = zAxis / length;
     const oldX = player.x, oldZ = player.z;
-    city.move(player, vx * player.speed * dt, vz * player.speed * dt, 0.32);
+    city.move(player, vx * player.speed * dt, vz * player.speed * dt, player.radius);
     moving = Math.hypot(player.x - oldX, player.z - oldZ) > 0.001;
     player.dx = vx;
     player.dz = vz;
@@ -221,7 +224,7 @@ function update(dt) {
     const vx = player.x - enemy.x;
     const vz = player.z - enemy.z;
     const dist = Math.hypot(vx, vz) || 0.001;
-    const attacking = dist <= enemy.size + 0.38 && city.lineClear(enemy.x, enemy.z, player.x, player.z, 0.1);
+    const attacking = dist <= enemy.size + player.radius + 0.06 && city.lineClear(enemy.x, enemy.z, player.x, player.z, 0.1);
     enemy.root.rotation.y = Math.atan2(vx, vz);
     if (!attacking) {
       const direction = city.chase(enemy.x, enemy.z, player.x, player.z);
@@ -359,6 +362,7 @@ function animate(now) {
   const dt = Math.min(0.05, frameTime ? (now - frameTime) / 1000 : 0);
   frameTime = now;
   update(dt);
+  if (player.model) city.updateVisibility(camera, player.root, 1.5 * HERO_SCALE, dt);
   renderer.render(scene, camera);
 }
 
