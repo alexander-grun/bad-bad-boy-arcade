@@ -25,6 +25,8 @@ const scoreLabel = document.querySelector('#score');
 const waveLabel = document.querySelector('#wave');
 const finalScore = document.querySelector('#final-score');
 const toast = document.querySelector('#toast');
+const sprayRange = document.querySelector('#spray-range');
+const pressureFill = document.querySelector('#pressure-fill');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -71,6 +73,7 @@ const player = {
   radius: 0.32 * HERO_SCALE,
   invulnerable: 0,
   fireTimer: 0,
+  tapTimer: 0,
   runTime: 0,
   runBlend: 0
 };
@@ -218,9 +221,12 @@ function update(dt) {
   player.body.rotation.x = 0.07 * player.runBlend;
   animateHero(player.rig, player.runTime, player.runBlend);
 
-  const firing = keys.has('Space') || keys.has('Fire');
+  const firing = keys.has('Space') || keys.has('Fire') || player.tapTimer > 0;
+  player.tapTimer = Math.max(0, player.tapTimer - dt);
   // Each parcel starts at the hands, then follows its own ballistic trajectory.
-  stream.update(dt, firing, player.rig.emitter, player, enemies);
+  const spray = stream.update(dt, firing, player.rig.emitter, player, enemies);
+  pressureFill.style.transform = `scaleX(${spray.charge})`;
+  sprayRange.textContent = spray.blocked ? 'BLOCKED' : `${spray.range.toFixed(1)} m`;
   player.fireTimer -= dt;
   if (firing && player.fireTimer <= 0) {
     blip(180 + Math.random() * 35, 0.035);
@@ -324,6 +330,7 @@ function startGame() {
   player.runBlend = 0;
   player.invulnerable = 0;
   player.fireTimer = 0;
+  player.tapTimer = 0;
   player.root.rotation.y = 0;
   player.root.position.set(0, 0, 0);
   player.model.material.opacity = 1;
@@ -342,6 +349,7 @@ function startGame() {
 
 function clearArena() {
   stream.clear();
+  player.tapTimer = 0;
   for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {
     scene.remove(effect.object);
@@ -355,6 +363,7 @@ function clearArena() {
 function endGame() {
   playing = false;
   stream.clear();
+  player.tapTimer = 0;
   finalScore.textContent = String(score).padStart(4, '0');
   endScreen.classList.remove('hidden');
   blip(80, 0.25);
@@ -378,16 +387,22 @@ function animate(now) {
   renderer.render(scene, camera);
 }
 
+function beginSpray() {
+  player.tapTimer = 0.075;
+  stream.resetPressure();
+}
+
 window.addEventListener('keydown', (event) => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
   keys.add(event.code);
+  if (event.code === 'Space' && !event.repeat && playing) beginSpray();
   if (event.code === 'Enter' && !playing && !startScreen.classList.contains('hidden') && player.model) startGame();
 });
 window.addEventListener('keyup', (event) => keys.delete(event.code));
-window.addEventListener('blur', () => keys.clear());
+window.addEventListener('blur', () => { keys.clear(); player.tapTimer = 0; });
 window.addEventListener('resize', resize);
 canvas.addEventListener('pointerdown', (event) => {
-  if (event.pointerType === 'mouse' && event.button === 0 && playing) keys.add('Fire');
+  if (event.pointerType === 'mouse' && event.button === 0 && playing) { keys.add('Fire'); beginSpray(); }
 });
 window.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') keys.delete('Fire'); });
 startButton.addEventListener('click', startGame);
@@ -408,7 +423,7 @@ for (const button of document.querySelectorAll('[data-key]')) {
   button.addEventListener('lostpointercapture', release);
 }
 const fireButton = document.querySelector('#mobile-fire');
-fireButton.addEventListener('pointerdown', (event) => { event.preventDefault(); keys.add('Fire'); fireButton.setPointerCapture(event.pointerId); });
+fireButton.addEventListener('pointerdown', (event) => { event.preventDefault(); keys.add('Fire'); beginSpray(); fireButton.setPointerCapture(event.pointerId); });
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) fireButton.addEventListener(name, () => keys.delete('Fire'));
 
 resize();

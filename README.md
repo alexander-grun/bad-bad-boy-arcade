@@ -12,7 +12,7 @@ python3 server.py
 
 Open [http://localhost:8000/](http://localhost:8000/). No build step or package installation is needed. Three.js and the fonts are included in `vendor/`, so gameplay does not depend on a CDN or an internet connection. You can also start the server with `npm start`. The server always serves fresh application modules to prevent stale code from different versions being mixed.
 
-Controls: `WASD` or arrow keys to run and turn; hold the left mouse button or `Space` to spray. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
+Controls: `WASD` or arrow keys to run and turn; tap the left mouse button or `Space` for nearby enemies, or hold to spray farther. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
 
 The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
 The character reaches the third-floor windows of the map's buildings. His height is three storeys at 1.15 game units each (3.45 total), using the same storey spacing as the facades. The emitter, collision radius, and liquid thickness match this size. The camera frames his full height, and the running animation follows the distance travelled with a stride proportional to his height.
@@ -23,9 +23,11 @@ The entry point uses one version for all game modules. Startup errors appear abo
 
 ## Liquid stream
 
-Hold the fire button for a pressurised stream reaching about 8 game metres from the elevated emitter on level ground. It launches forward from beneath the character's hands, rises slightly, and falls along a gravity-driven parabola. The glossy surface pulses as it flows, breaks into droplets near the end, and splashes against enemies, walls, and the ground, with expanding rings on the pavement. Its particle capacity covers the full fall from this height; collisions account for obstacle height, allowing liquid to pass above benches and cars.
+A tap sends a short, downward stream about 0.9 game metres from the emitter, making enemies near the feet reachable. Holding fire builds pressure over 1.2 seconds: launch speed and angle increase smoothly until the stream reaches about 8 metres on level ground. Release to return to the short range. The liquid always launches forward from beneath the character's hands and follows a gravity-driven parabola. The glossy surface pulses as it flows, breaks into droplets near the end, and splashes against enemies, walls, and the ground, with expanding rings on the pavement. Its particle capacity covers the full fall from this height; collisions account for obstacle height, allowing liquid to pass above benches and cars.
 
-Liquid already in flight keeps its own trajectory when the character turns. Releasing fire lets the remaining liquid fall. Collision and damage follow the actual liquid parcels, so the stream stops at the first enemy or obstacle. Hits deal 2 damage, at most once every 0.1 seconds per enemy, with stronger knockback.
+The ground ring previews the landing point, and the spray range meter shows the pressure and distance. The marker hides and the meter reads BLOCKED if an obstacle cuts the trajectory short. Every tap produces at least a 75 ms burst, including clicks shorter than a frame. Ground splashes also damage enemies within about half a metre of the landing point, plus their collision radius; splash damage respects obstacles and shares the direct-hit cooldown.
+
+Liquid already in flight keeps its own trajectory when the character turns or the pressure changes. Releasing fire lets the remaining liquid fall. Collision and damage follow the actual liquid parcels, so the stream stops at the first enemy or obstacle. Hits deal 2 damage, at most once every 0.1 seconds per enemy, with stronger knockback.
 
 ## City and enemies
 

@@ -85,6 +85,12 @@ kbd { padding: 6px 8px; border: 1px solid #ffffff30; border-bottom-width: 2px; b
 .toast { position: absolute; z-index: 3; top: 82px; left: 50%; transform: translate(-50%, -10px); padding: 9px 15px; border: 1px solid #ffffff20; border-radius: 999px; color: var(--gold); background: #181925df; font: 700 12px/1 "Barlow Condensed", sans-serif; letter-spacing: .12em; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
 .toast.visible { transform: translate(-50%, 0); opacity: 1; }
 .mobile-controls { display: none; }
+.range-hud { position: absolute; z-index: 2; top: 78px; left: clamp(16px, 4vw, 54px); width: 170px; padding: 10px 12px; border: 1px solid #ffffff20; border-radius: 10px; background: #182029c9; color: #bfc6c9; pointer-events: none; font-size: 9px; font-weight: 700; letter-spacing: .09em; }
+.range-hud > div:first-child { display: flex; justify-content: space-between; gap: 8px; }
+.range-hud strong { color: var(--gold); }
+.pressure-track { height: 5px; margin-top: 9px; overflow: hidden; border-radius: 4px; background: #ffffff20; }
+.pressure-track span { display: block; height: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, #fff0a1, #ffbd31); }
+.range-hud small { display: block; margin-top: 7px; font-size: 9px; font-weight: 500; letter-spacing: 0; color: #c0c4c5; }
 
 @media (max-width: 680px) {
   .hud { gap: 12px; padding: 14px 14px; }
@@ -93,6 +99,7 @@ kbd { padding: 6px 8px; border: 1px solid #ffffff30; border-bottom-width: 2px; b
   .stat strong { font-size: 18px; }
   .health { width: 60px; }
   .icon-button { display: none; }
+  .range-hud { top: 66px; left: 14px; width: 148px; }
   .card { margin: 0; padding: 27px; }
   h1 { font-size: 60px; }
   .controls-hint { display: none; }

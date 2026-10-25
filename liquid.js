@@ -2,11 +2,14 @@ import * as THREE from 'three';
 
 const STEP = 1 / 120;
 const FLOW_RATE = 180;
-const SPEED = 9;
-const LIFT = 1.1;
+const MIN_SPEED = 2.4;
+const MAX_SPEED = 9;
+const MIN_LIFT = -2.3;
+const MAX_LIFT = 1.1;
+const CHARGE_TIME = 1.2;
 const GRAVITY = 5.2;
 const RADIUS = 0.035;
-const BREAKUP_TIME = 0.54;
+const SPLASH_RADIUS = 0.45;
 const HIT_INTERVAL = 0.1;
 const MAX_PARCELS = 360;
 const MAX_DROPS = 160;
@@ -30,8 +33,14 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
   const side = new THREE.Vector3();
   const normal = new THREE.Vector3();
   const radial = new THREE.Vector3();
+  const launchVelocity = new THREE.Vector3();
+  const predicted = new THREE.Vector3();
+  const previousPrediction = new THREE.Vector3();
+  const targetPosition = new THREE.Vector3();
+  const state = { charge: 0, range: 0, blocked: false };
   const dummy = new THREE.Object3D();
   let time = 0, accumulator = 0, emission = 0, sequence = 0, batch = 0;
+  let heldTime = 0, speed = MIN_SPEED, lift = MIN_LIFT;
   let wasFiring = false, nextSplash = 0, nextRipple = 0;
 
   const material = new THREE.MeshPhysicalMaterial({
@@ -57,6 +66,47 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
   droplets.frustumCulled = false;
   droplets.count = 0;
   scene.add(droplets);
+
+  const landingMarker = new THREE.Mesh(
+    new THREE.RingGeometry(0.24, 0.3, 32),
+    new THREE.MeshBasicMaterial({ color: '#fff0a1', transparent: true, opacity: 0.65, depthWrite: false, side: THREE.DoubleSide }),
+  );
+  landingMarker.rotation.x = -Math.PI / 2;
+  landingMarker.visible = false;
+  scene.add(landingMarker);
+
+  function flightTime(height, verticalSpeed) {
+    return (verticalSpeed + Math.sqrt(verticalSpeed * verticalSpeed + 2 * GRAVITY * Math.max(0, height - groundHeight))) / GRAVITY;
+  }
+
+  function setPressure() {
+    state.charge = THREE.MathUtils.clamp(heldTime / CHARGE_TIME, 0, 1);
+    const pressure = THREE.MathUtils.smoothstep(state.charge, 0, 1);
+    speed = THREE.MathUtils.lerp(MIN_SPEED, MAX_SPEED, pressure);
+    lift = THREE.MathUtils.lerp(MIN_LIFT, MAX_LIFT, pressure);
+    launchVelocity.copy(direction).multiplyScalar(speed).setY(lift);
+  }
+
+  function updateLandingMarker(firing) {
+    const duration = flightTime(origin.y, lift);
+    state.range = speed * duration;
+    state.blocked = false;
+    previousPrediction.copy(origin);
+    for (let i = 1; i <= 32; i++) {
+      const t = duration * i / 32;
+      predicted.copy(origin).addScaledVector(launchVelocity, t);
+      predicted.y -= 0.5 * GRAVITY * t * t;
+      if (!city.lineClear3D(previousPrediction, predicted, radius)) {
+        state.blocked = true;
+        break;
+      }
+      previousPrediction.copy(predicted);
+    }
+    landingMarker.visible = !state.blocked;
+    landingMarker.position.set(predicted.x, 0.02, predicted.z);
+    landingMarker.material.opacity = firing ? 0.8 : 0.4;
+    landingMarker.scale.setScalar(1 + state.charge * 0.25);
+  }
 
   const ripples = Array.from({ length: 12 }, () => {
     const mesh = new THREE.Mesh(
@@ -108,6 +158,24 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
     return t >= 0 && t <= 1 ? t : Infinity;
   }
 
+  function damageEnemy(enemy, velocity) {
+    if (!enemy.alive || time < (enemy.nextJetHit ?? 0)) return;
+    enemy.nextJetHit = time + HIT_INTERVAL;
+    delta.copy(velocity).setY(0).normalize();
+    onHit(enemy, delta);
+  }
+
+  function damageGroundSplash(point, velocity, enemies) {
+    for (const enemy of enemies) {
+      if (!enemy.alive || time < (enemy.nextJetHit ?? 0)) continue;
+      const reach = SPLASH_RADIUS + radius + enemy.size;
+      if ((enemy.x - point.x) ** 2 + (enemy.z - point.z) ** 2 > reach * reach) continue;
+      targetPosition.set(enemy.x, enemy.hitHeight, enemy.z);
+      if (!city.lineClear3D(point, targetPosition, 0.02)) continue;
+      damageEnemy(enemy, velocity);
+    }
+  }
+
   function simulate(enemies) {
     time += STEP;
     for (let i = parcels.length - 1; i >= 0; i--) {
@@ -140,11 +208,8 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
       if (contact !== Infinity) {
         impact.lerpVectors(parcel.previous, parcel.position, contact);
         splash(impact, parcel.velocity, ground);
-        if (target && time >= (target.nextJetHit ?? 0)) {
-          target.nextJetHit = time + HIT_INTERVAL;
-          delta.copy(parcel.velocity).setY(0).normalize();
-          onHit(target, delta);
-        }
+        if (target) damageEnemy(target, parcel.velocity);
+        else if (ground) damageGroundSplash(impact, parcel.velocity, enemies);
         parcels.splice(i, 1);
       } else if (parcel.age > 2) parcels.splice(i, 1);
     }
@@ -195,10 +260,8 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
       previous = { position, id, batch: batchId };
       ring++;
     }
-    const flightTime = (LIFT + Math.sqrt(LIFT * LIFT + 2 * GRAVITY * Math.max(0, origin.y - groundHeight))) / GRAVITY;
-    const breakupTime = Math.max(BREAKUP_TIME, flightTime * 0.78);
     for (const parcel of parcels) {
-      if (parcel.age < breakupTime) addRing(parcel.position, parcel.velocity, parcel.age, parcel.id, parcel.batch);
+      if (parcel.age < parcel.breakupTime) addRing(parcel.position, parcel.velocity, parcel.age, parcel.id, parcel.batch);
       else {
         const dropRadius = radius * (0.7 + Math.sin(parcel.id * 2.1) * 0.18);
         drawDrop(parcel.position, parcel.velocity, dropRadius, dropCount++, 1.9);
@@ -206,8 +269,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
     }
     // The newest ring follows the actual emitter, even between physics steps.
     if (firing) {
-      delta.copy(direction).multiplyScalar(SPEED).setY(LIFT);
-      addRing(origin, delta, 0, sequence + 1, batch);
+      addRing(origin, launchVelocity, 0, sequence + 1, batch);
     }
     for (const drop of splashes) drawDrop(drop.position, drop.velocity, drop.radius * (1 - drop.age / drop.life * 0.5), dropCount++);
     geometry.setDrawRange(0, indexCount);
@@ -230,38 +292,51 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
   function update(dt, firing, emitter, facing, enemies) {
     emitter.getWorldPosition(origin);
     direction.set(facing.dx, 0, facing.dz).normalize();
-    if (firing && !wasFiring) { batch++; emission = 0; previousOrigin.copy(origin); }
+    if (firing && !wasFiring) { batch++; heldTime = 0; emission = 0; previousOrigin.copy(origin); }
+    if (!firing) { heldTime = 0; emission = 0; }
+    setPressure();
     accumulator += dt;
     const steps = Math.floor(accumulator / STEP);
     for (let n = 0; n < steps; n++) {
       simulate(enemies);
       if (firing) {
+        heldTime = Math.min(CHARGE_TIME, heldTime + STEP);
+        setPressure();
         emissionOrigin.lerpVectors(previousOrigin, origin, (n + 1) / steps);
         emission += FLOW_RATE * STEP;
         while (emission >= 1) {
           emission--;
           const age = emission / FLOW_RATE;
-          const velocity = direction.clone().multiplyScalar(SPEED).setY(LIFT);
+          const velocity = launchVelocity.clone();
           const position = emissionOrigin.clone().addScaledVector(velocity, age);
           position.y -= 0.5 * GRAVITY * age * age;
           velocity.y -= GRAVITY * age;
           if (parcels.length >= MAX_PARCELS) parcels.shift();
-          parcels.push({ position, previous: position.clone(), velocity, age, id: ++sequence, batch });
+          const breakupTime = Math.max(0.18, flightTime(emissionOrigin.y, lift) * 0.78);
+          parcels.push({ position, previous: position.clone(), velocity, age, id: ++sequence, batch, breakupTime });
         }
       }
       accumulator -= STEP;
     }
     for (const ripple of ripples) ripple.age += dt;
     render(firing);
+    updateLandingMarker(firing);
     previousOrigin.copy(origin);
     wasFiring = firing;
+    return state;
   }
 
   function clear() {
     parcels.length = splashes.length = 0;
     accumulator = emission = 0; wasFiring = false;
+    heldTime = 0; state.charge = 0; state.blocked = false;
     surface.visible = false; droplets.count = 0;
+    landingMarker.visible = false;
     for (const ripple of ripples) { ripple.age = 1; ripple.mesh.visible = false; }
   }
-  return { update, clear };
+  function resetPressure() {
+    heldTime = 0;
+    wasFiring = false;
+  }
+  return { update, clear, resetPressure };
 }
