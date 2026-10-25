@@ -25,19 +25,19 @@
         <div class="stat"><span class="stat-label">ВОЛНА</span><strong id="wave">1</strong></div>
         <div class="stat"><span class="stat-label">СЧЁТ</span><strong id="score">0000</strong></div>
         <div class="health" aria-label="Здоровье"><span id="health-fill"></span></div>
-        <button id="sound" class="icon-button" type="button" aria-label="Включить или выключить звук">♫</button>
+        <button id="sound" class="icon-button" type="button" aria-label="Включить или выключить звук">♪</button>
       </header>
-
-      <div id="load-status" class="load-status">Загружаю фигурку…</div>
 
       <section id="start-screen" class="overlay">
         <div class="card">
-          <div class="eyebrow">BAD BAD BOY • ХЕЛЬСИНКИ</div>
+          <div class="eyebrow">ГОРОДСКОЙ ПЕРЕПОЛОХ • ХЕЛЬСИНКИ</div>
           <h1>ЗОЛОТОЙ<br /><span>ЗАЛП</span></h1>
-          <p>Уворачивайся от слизней, разворачивайся к ним и поливай золотой струёй.</p>
+          <p>Улитки и слизни захватили квартал! Беги по улицам, разворачивайся к врагам и поливай золотой струёй.</p>
           <div class="keys"><kbd>W A S D</kbd><span>бег и поворот</span><kbd>КЛИК / ПРОБЕЛ</kbd><span>струя</span></div>
+          <div id="load-status" class="load-status" role="status">Загружаю модели…</div>
           <button id="start" class="primary-button" type="button" disabled>ЗАГРУЗКА…</button>
           <small>Струя всегда бьёт вперёд. Зажми кнопку, чтобы поливать</small>
+          <a class="credits-link" href="./credits.html" target="_blank" rel="noopener">Модели и авторы ↗</a>
         </div>
       </section>
 
@@ -45,7 +45,7 @@
         <div class="card end-card">
           <div class="eyebrow">РАУНД ОКОНЧЕН</div>
           <h2 id="end-title">ПОПАЛСЯ!</h2>
-          <p>Слизни добрались до героя.</p>
+          <p>Ползучие захватили площадь. Попробуем ещё?</p>
           <div class="final-score">СЧЁТ <strong id="final-score">0000</strong></div>
           <button id="restart" class="primary-button" type="button">ЕЩЁ РАУНД</button>
         </div>

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createHero, animateHero } from './hero.js';
+import { createCity } from './city.js';
+import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb';
-const ARENA_RADIUS = 8.4;
 const keys = new Set();
 const STREAM_LENGTH = 1.9;
 
@@ -28,57 +29,26 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#171925');
-scene.fog = new THREE.Fog('#171925', 13, 28);
+scene.background = new THREE.Color('#7c929f');
+scene.fog = new THREE.Fog('#7c929f', 25, 65);
 
-const camera = new THREE.PerspectiveCamera(43, 1, 0.1, 60);
-camera.position.set(0, 8, 10);
+const camera = new THREE.PerspectiveCamera(47, 1, 0.1, 100);
+camera.position.set(0, 10, 12);
+camera.lookAt(0, 0, 0);
 
-scene.add(new THREE.HemisphereLight(0xcfdcff, 0x35303e, 2.2));
-const keyLight = new THREE.DirectionalLight(0xffe6bb, 3.2);
-keyLight.position.set(-5, 10, 5);
+scene.add(new THREE.HemisphereLight(0xd8e9ff, 0x757264, 2.3));
+const keyLight = new THREE.DirectionalLight(0xffdfad, 2.6);
+keyLight.position.set(-12, 25, 10);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
-keyLight.shadow.camera.left = -12;
-keyLight.shadow.camera.right = 12;
-keyLight.shadow.camera.top = 12;
-keyLight.shadow.camera.bottom = -12;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -28;
+keyLight.shadow.camera.right = 28;
+keyLight.shadow.camera.top = 28;
+keyLight.shadow.camera.bottom = -28;
+keyLight.shadow.normalBias = 0.035;
+keyLight.shadow.camera.far = 70;
 scene.add(keyLight);
-const rimLight = new THREE.PointLight(0xa66bff, 24, 18, 2);
-rimLight.position.set(5, 5, -3);
-scene.add(rimLight);
-
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(ARENA_RADIUS, 72),
-  new THREE.MeshStandardMaterial({ color: '#222431', roughness: 0.88, metalness: 0.05 })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
-
-const grid = new THREE.GridHelper(ARENA_RADIUS * 2, 24, '#514a68', '#333344');
-grid.position.y = 0.006;
-grid.material.transparent = true;
-grid.material.opacity = 0.25;
-scene.add(grid);
-
-const arenaRing = new THREE.Mesh(
-  new THREE.TorusGeometry(ARENA_RADIUS, 0.055, 8, 120),
-  new THREE.MeshStandardMaterial({ color: '#7556a9', emissive: '#291942', emissiveIntensity: 0.8, roughness: 0.45 })
-);
-arenaRing.rotation.x = Math.PI / 2;
-arenaRing.position.y = 0.035;
-scene.add(arenaRing);
-
-const pedestal = new THREE.Group();
-const edgeRing = new THREE.Mesh(
-  new THREE.TorusGeometry(ARENA_RADIUS + 0.14, 0.16, 8, 120),
-  new THREE.MeshStandardMaterial({ color: '#333447', roughness: 0.72, metalness: 0.16 })
-);
-edgeRing.rotation.x = Math.PI / 2;
-edgeRing.position.y = -0.12;
-pedestal.add(edgeRing);
-scene.add(pedestal);
+const city = createCity(scene);
 
 const player = {
   root: new THREE.Group(),
@@ -123,64 +93,42 @@ let soundEnabled = false;
 let audioContext = null;
 let frameTime = 0;
 
-function loadHero() {
-  const loader = new GLTFLoader();
-  loader.load(MODEL_URL, (gltf) => {
+async function loadModels() {
+  try {
+    status.textContent = 'Загружаю героя, слизней и улиток…';
+    const [gltf] = await Promise.all([
+      new GLTFLoader().loadAsync(MODEL_URL),
+      loadEnemyModels(),
+    ]);
     player.rig = createHero(gltf.scene);
     player.model = player.rig.mesh;
     player.body.add(player.model);
     status.classList.add('hidden');
     startButton.disabled = false;
     startButton.textContent = 'НАЧАТЬ ИГРУ';
-  }, (event) => {
-    if (event.lengthComputable) {
-      status.textContent = `Загружаю фигурку… ${Math.round(event.loaded / event.total * 100)}%`;
-    }
-  }, (error) => {
-    console.error('Could not load the player GLB:', error);
-    status.textContent = 'Не загрузилась фигурка. Запусти игру через локальный сервер.';
-  });
+  } catch (error) {
+    console.error('Could not load game models:', error);
+    status.textContent = 'Не загрузились модели. Обнови страницу с запущенным локальным сервером.';
+  }
 }
 
-function makeEnemy(x, z, level) {
-  const root = new THREE.Group();
-  root.position.set(x, 0, z);
-  const color = ['#b949e8', '#ff5a76', '#55c6bb', '#ed8a45'][(Math.random() * 4) | 0];
-  const size = 0.37 + Math.random() * 0.1 + Math.min(level, 5) * 0.012;
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(size, 18, 14),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.43, metalness: 0.02, emissive: color, emissiveIntensity: 0.08 })
-  );
-  body.scale.set(1, 0.8, 0.9);
-  body.position.y = size * 0.8;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  root.add(body);
-
-  const eyeMaterial = new THREE.MeshStandardMaterial({ color: '#211729', roughness: 0.38 });
-  for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(size * 0.105, 10, 8), eyeMaterial);
-    eye.position.set(side * size * 0.22, size * 0.94, size * 0.78);
-    root.add(eye);
-  }
-  const shine = new THREE.Mesh(
-    new THREE.SphereGeometry(size * 0.1, 10, 8),
-    new THREE.MeshBasicMaterial({ color: '#fff4c4' })
-  );
-  shine.position.set(-size * 0.3, size * 1.21, size * 0.48);
-  root.add(shine);
-  scene.add(root);
-  enemies.push({ root, body, x, z, size, hp: 1 + Math.floor((level - 1) / 3), speed: 0.85 + Math.random() * 0.25 + level * 0.035, hit: 0, attack: Math.random() * 0.5, alive: true, wobble: Math.random() * 6 });
+function makeEnemy(x, z, level, kind) {
+  const enemy = createEnemy(kind, level);
+  enemy.x = x;
+  enemy.z = z;
+  enemy.root.position.set(x, 0, z);
+  scene.add(enemy.root);
+  enemies.push(enemy);
 }
 
 function spawnWave(level) {
   wave = level;
   waveLabel.textContent = String(wave).padStart(2, '0');
-  const count = Math.min(3 + level * 2, 15);
+  city.routeTo(player.x, player.z);
+  const count = Math.min(3 + level * 2, 18);
   for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
-    const radius = 5.8 + Math.random() * 1.7;
-    makeEnemy(Math.cos(angle) * radius, Math.sin(angle) * radius, level);
+    const point = city.spawnPoint(player, i, count);
+    makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'snail' : 'slime');
   }
   if (level > 1) showToast(`ВОЛНА ${level}`);
 }
@@ -188,11 +136,11 @@ function spawnWave(level) {
 function removeEnemy(enemy, pop = false) {
   if (!enemy.alive) return;
   enemy.alive = false;
-  scene.remove(enemy.root);
+  disposeEnemy(enemy);
   if (pop) {
-    score += 100;
+    score += enemy.kind === 'snail' ? 150 : 100;
     scoreLabel.textContent = String(score).padStart(4, '0');
-    burst(enemy.x, enemy.size * 0.7, enemy.z, 0xffd34e, 10);
+    burst(enemy.x, enemy.hitHeight, enemy.z, 0xffd34e, 10);
     blip(440 + Math.random() * 280, 0.045);
   }
 }
@@ -202,7 +150,9 @@ function updateStream(firing) {
   if (!firing) return;
   player.rig.emitter.getWorldPosition(streamOrigin);
   streamDirection.set(player.dx, 0, player.dz).normalize();
-  streamAxis.copy(streamDirection).multiplyScalar(STREAM_LENGTH);
+  let reach = STREAM_LENGTH;
+  while (reach > 0.1 && !city.lineClear(streamOrigin.x, streamOrigin.z, streamOrigin.x + streamDirection.x * reach, streamOrigin.z + streamDirection.z * reach, 0)) reach -= 0.1;
+  streamAxis.copy(streamDirection).multiplyScalar(reach);
   streamAxis.y = -0.09;
   stream.position.copy(streamOrigin).addScaledVector(streamAxis, 0.5);
   stream.scale.y = streamAxis.length();
@@ -217,16 +167,16 @@ function shoot() {
   const length = streamAxis.length();
   for (const enemy of enemies) {
     if (!enemy.alive) continue;
-    const target = new THREE.Vector3(enemy.x, enemy.size * 0.75, enemy.z);
+    const target = new THREE.Vector3(enemy.x, enemy.hitHeight, enemy.z);
     const relative = target.clone().sub(origin);
     const along = relative.dot(ray);
     if (along < 0.1 || along > length + enemy.size * 0.5) continue;
     const closest = origin.clone().addScaledVector(ray, along);
     if (closest.distanceTo(target) > enemy.size + 0.13) continue;
+    if (!city.lineClear(origin.x, origin.z, enemy.x, enemy.z, 0)) continue;
     enemy.hp--;
     enemy.hit = 0.14;
-    enemy.x += dir.x * 0.23;
-    enemy.z += dir.z * 0.23;
+    city.move(enemy, dir.x * 0.23, dir.z * 0.23, enemy.size);
     enemy.root.position.set(enemy.x, 0, enemy.z);
     if (enemy.hp <= 0) removeEnemy(enemy, true);
     else {
@@ -289,20 +239,15 @@ function update(dt) {
   if (moving) {
     const vx = xAxis / length;
     const vz = zAxis / length;
-    player.x += vx * player.speed * dt;
-    player.z += vz * player.speed * dt;
+    const oldX = player.x, oldZ = player.z;
+    city.move(player, vx * player.speed * dt, vz * player.speed * dt, 0.32);
+    moving = Math.hypot(player.x - oldX, player.z - oldZ) > 0.001;
     player.dx = vx;
     player.dz = vz;
     player.root.rotation.y = Math.atan2(vx, vz);
     player.runTime += dt * 11;
   }
 
-  const radius = Math.hypot(player.x, player.z);
-  if (radius > ARENA_RADIUS - 0.55) {
-    const factor = (ARENA_RADIUS - 0.55) / radius;
-    player.x *= factor;
-    player.z *= factor;
-  }
   player.root.position.set(player.x, 0, player.z);
   player.runBlend = THREE.MathUtils.damp(player.runBlend, moving ? 1 : 0, 18, dt);
   player.body.position.y = Math.abs(Math.sin(player.runTime)) * 0.035 * player.runBlend + Math.sin(gameTime * 1.5) * 0.008 * (1 - player.runBlend);
@@ -319,28 +264,45 @@ function update(dt) {
     player.fireTimer = 0.12;
   }
 
+  city.routeTo(player.x, player.z);
   for (const enemy of enemies) {
     if (!enemy.alive) continue;
     enemy.attack -= dt;
     enemy.hit = Math.max(0, enemy.hit - dt);
-    enemy.body.material.emissiveIntensity = enemy.hit > 0 ? 0.7 : 0.08;
-    enemy.body.scale.y = 0.8 + Math.sin(gameTime * 5 + enemy.wobble) * 0.035;
     const vx = player.x - enemy.x;
     const vz = player.z - enemy.z;
     const dist = Math.hypot(vx, vz) || 0.001;
-    if (dist > enemy.size + 0.48) {
-      enemy.x += vx / dist * enemy.speed * dt;
-      enemy.z += vz / dist * enemy.speed * dt;
+    const attacking = dist <= enemy.size + 0.38 && city.lineClear(enemy.x, enemy.z, player.x, player.z, 0.1);
+    enemy.root.rotation.y = Math.atan2(vx, vz);
+    if (!attacking) {
+      const direction = city.chase(enemy.x, enemy.z, player.x, player.z);
+      // Soft separation keeps a pack of snails from collapsing into one shell.
+      for (const other of enemies) {
+        if (other === enemy || !other.alive) continue;
+        const sx = enemy.x - other.x, sz = enemy.z - other.z;
+        const distance = Math.hypot(sx, sz);
+        const spacing = (enemy.size + other.size) * 0.88;
+        if (distance > 0.001 && distance < spacing) {
+          direction.x += sx / distance * (spacing - distance) * 1.8;
+          direction.z += sz / distance * (spacing - distance) * 1.8;
+        }
+      }
+      const step = Math.hypot(direction.x, direction.z);
+      if (step > 0.01) {
+        city.move(enemy, direction.x / step * enemy.speed * dt, direction.z / step * enemy.speed * dt, enemy.size);
+        enemy.root.rotation.y = Math.atan2(direction.x, direction.z);
+      }
       enemy.root.position.set(enemy.x, 0, enemy.z);
     } else if (enemy.attack <= 0 && player.invulnerable <= 0) {
       player.hp--;
       player.invulnerable = 0.85;
-      enemy.attack = 0.85;
+      enemy.attack = enemy.kind === 'snail' ? 1.2 : 0.85;
       updateHealth();
       burst(player.x, 0.35, player.z, 0xff6681, 5);
       blip(115, 0.12);
       if (player.hp <= 0) endGame();
     }
+    animateEnemy(enemy, dt, gameTime, attacking);
   }
 
   player.invulnerable = Math.max(0, player.invulnerable - dt);
@@ -373,15 +335,15 @@ function update(dt) {
     }
   } else pendingWave = 0;
 
-  const cameraTarget = new THREE.Vector3(player.x, 0, player.z + 1.1);
-  camera.position.lerp(new THREE.Vector3(player.x, 8, player.z + 10), 1 - Math.exp(-2.5 * dt));
+  const cameraTarget = new THREE.Vector3(player.x, 0, player.z);
+  camera.position.lerp(new THREE.Vector3(player.x, 10, player.z + 12), 1 - Math.exp(-2.5 * dt));
   camera.lookAt(cameraTarget);
 }
 
 function updateHealth() {
   const ratio = Math.max(0, player.hp / player.maxHp);
   healthFill.style.width = `${ratio * 100}%`;
-  if (ratio < 0.4) healthFill.style.background = 'linear-gradient(90deg, #f04559, #ff7952)';
+  healthFill.style.background = ratio < 0.4 ? 'linear-gradient(90deg, #f04559, #ff7952)' : 'linear-gradient(90deg, #ff8b54, #ffd34e)';
 }
 
 function startGame() {
@@ -400,6 +362,10 @@ function startGame() {
   player.invulnerable = 0;
   player.fireTimer = 0;
   player.root.rotation.y = 0;
+  player.root.position.set(0, 0, 0);
+  player.model.material.opacity = 1;
+  player.model.material.transparent = false;
+  camera.position.set(0, 10, 12);
   animateHero(player.rig, 0, 0);
   scoreLabel.textContent = '0000';
   updateHealth();
@@ -412,7 +378,7 @@ function startGame() {
 
 function clearArena() {
   stream.visible = false;
-  for (const enemy of enemies) scene.remove(enemy.root);
+  for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {
     scene.remove(effect.object);
     effect.object.geometry.dispose();
@@ -458,7 +424,7 @@ window.addEventListener('resize', resize);
 canvas.addEventListener('pointerdown', (event) => {
   if (event.pointerType === 'mouse' && event.button === 0 && playing) keys.add('Fire');
 });
-window.addEventListener('pointerup', () => keys.delete('Fire'));
+window.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') keys.delete('Fire'); });
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', startGame);
 document.querySelector('#sound').addEventListener('click', (event) => {
@@ -481,5 +447,5 @@ fireButton.addEventListener('pointerdown', (event) => { event.preventDefault(); 
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) fireButton.addEventListener(name, () => keys.delete('Fire'));
 
 resize();
-loadHero();
+loadModels();
 requestAnimationFrame(animate);

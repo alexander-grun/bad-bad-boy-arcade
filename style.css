@@ -27,10 +27,10 @@ button { font: inherit; }
 .health span { display: block; width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff8b54, #ffd34e); transition: width .2s, background .2s; }
 .icon-button { width: 34px; height: 34px; padding: 0; border: 1px solid #ffffff35; border-radius: 50%; color: var(--ink); background: #ffffff12; pointer-events: auto; cursor: pointer; }
 
-.load-status { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 15px; border: 1px solid #ffffff22; border-radius: 999px; color: var(--ink); background: #171824dd; font-size: 13px; box-shadow: 0 10px 30px #0005; transition: opacity .25s; }
-.load-status.hidden { opacity: 0; pointer-events: none; }
+.load-status { margin-bottom: 12px; color: var(--gold); font-size: 12px; line-height: 1.6; }
+.load-status.hidden { display: none; }
 .overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 24px; background: linear-gradient(90deg, #11131bcc, #11131b44 75%); transition: opacity .25s; }
-.overlay.hidden { opacity: 0; pointer-events: none; }
+.overlay.hidden { display: none; }
 .card { width: min(430px, 100%); margin-right: auto; margin-left: clamp(0px, 8vw, 120px); padding: clamp(24px, 4vw, 42px); border: 1px solid #ffffff20; border-radius: 20px; background: linear-gradient(145deg, rgba(32,31,45,.94), rgba(18,19,29,.94)); box-shadow: 0 24px 90px #0008; backdrop-filter: blur(14px); }
 .eyebrow { color: var(--gold); font: 700 11px/1 "Barlow Condensed", sans-serif; letter-spacing: .2em; }
 h1, h2 { margin: 14px 0 12px; color: var(--ink); font: 900 clamp(52px, 8vw, 78px)/.82 "Barlow Condensed", Impact, sans-serif; letter-spacing: -.025em; }
@@ -42,6 +42,8 @@ kbd { padding: 6px 8px; border: 1px solid #ffffff30; border-bottom-width: 2px; b
 .primary-button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.06); }
 .primary-button:disabled { opacity: .55; cursor: wait; }
 .card small { display: block; margin-top: 13px; color: #888594; text-align: center; font-size: 10px; }
+.credits-link { display: block; width: fit-content; margin: 18px auto 0; color: #b9b6c1; font-size: 10px; text-decoration: none; }
+.credits-link:hover { color: var(--gold); text-decoration: underline; }
 .end-card { margin-right: 0; margin-left: 0; text-align: center; }
 .end-card h2 { font-size: 58px; }
 .end-card p { margin: 8px auto 22px; }
