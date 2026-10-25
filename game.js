@@ -67,6 +67,9 @@ const player = {
   z: 0,
   dx: 0,
   dz: 1,
+  heading: 0,
+  moveSpeed: 0,
+  turnSpeed: 0,
   hp: 5,
   maxHp: 5,
   speed: 3.6,
@@ -192,36 +195,69 @@ function blip(frequency, duration) {
   oscillator.stop(audioContext.currentTime + duration);
 }
 
+function updateMovement(dt, firing) {
+  const forward = Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'));
+  const turn = Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft'));
+  const usingArrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(key => keys.has(key));
+  const worldX = Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
+  const worldZ = Number(keys.has('KeyS')) - Number(keys.has('KeyW'));
+  const precise = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const maxSpeed = player.speed * (precise ? 0.4 : firing ? 0.7 : 1);
+  const turnRate = precise ? 0.65 : firing ? 1.7 : 3.2;
+  let throttle = 0, targetTurnSpeed = 0, angleRemaining = null;
+
+  if (usingArrows) {
+    // Steering is continuous: releasing left/right preserves this exact angle.
+    throttle = forward;
+    targetTurnSpeed = -turn * turnRate;
+  } else if (worldX || worldZ) {
+    const targetHeading = Math.atan2(worldX, worldZ);
+    angleRemaining = Math.atan2(Math.sin(targetHeading - player.heading), Math.cos(targetHeading - player.heading));
+    targetTurnSpeed = THREE.MathUtils.clamp(angleRemaining * 14, -turnRate * 2, turnRate * 2);
+    // Finish facing the requested direction before accelerating into a U-turn.
+    throttle = Math.max(0, Math.cos(angleRemaining));
+  }
+
+  if (targetTurnSpeed) {
+    const decay = Math.exp(-18 * dt);
+    const angleStep = targetTurnSpeed * dt + (player.turnSpeed - targetTurnSpeed) * (1 - decay) / 18;
+    player.turnSpeed = targetTurnSpeed + (player.turnSpeed - targetTurnSpeed) * decay;
+    player.heading += angleRemaining === null ? angleStep : THREE.MathUtils.clamp(angleStep, -Math.abs(angleRemaining), Math.abs(angleRemaining));
+  } else player.turnSpeed = 0;
+  player.heading = Math.atan2(Math.sin(player.heading), Math.cos(player.heading));
+  player.dx = Math.sin(player.heading);
+  player.dz = Math.cos(player.heading);
+  player.root.rotation.y = player.heading;
+
+  const targetSpeed = throttle * maxSpeed;
+  const damping = throttle ? 14 : 24;
+  const decay = Math.exp(-damping * dt);
+  const distance = targetSpeed * dt + (player.moveSpeed - targetSpeed) * (1 - decay) / damping;
+  player.moveSpeed = targetSpeed + (player.moveSpeed - targetSpeed) * decay;
+  if (!throttle && Math.abs(player.moveSpeed) < 0.015) player.moveSpeed = 0;
+  const oldX = player.x, oldZ = player.z;
+  city.move(player, player.dx * distance, player.dz * distance, player.radius);
+  const travelled = Math.hypot(player.x - oldX, player.z - oldZ);
+  if (Math.abs(distance) > 0.0001 && travelled < Math.abs(distance) * 0.1) player.moveSpeed = 0;
+  // Both movement and the stream use the actual facing direction; no strafing.
+  player.runTime += Math.sign(distance) * travelled * Math.PI * 2 / (HERO_HEIGHT * 0.45);
+  return travelled > 0.0001;
+}
+
 function update(dt) {
   gameTime += dt;
   if (!playing) return;
 
-  const xAxis = Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'));
-  const zAxis = Number(keys.has('KeyS') || keys.has('ArrowDown')) - Number(keys.has('KeyW') || keys.has('ArrowUp'));
-  const length = Math.hypot(xAxis, zAxis);
-  let moving = length > 0;
-  if (moving) {
-    const vx = xAxis / length;
-    const vz = zAxis / length;
-    const oldX = player.x, oldZ = player.z;
-    city.move(player, vx * player.speed * dt, vz * player.speed * dt, player.radius);
-    const travelled = Math.hypot(player.x - oldX, player.z - oldZ);
-    moving = travelled > 0.001;
-    player.dx = vx;
-    player.dz = vz;
-    player.root.rotation.y = Math.atan2(vx, vz);
-    // Longer legs take longer strides; pace the gait by actual distance moved.
-    player.runTime += travelled * Math.PI * 2 / (HERO_HEIGHT * 0.45);
-  }
+  const firing = keys.has('Space') || keys.has('Fire') || player.tapTimer > 0;
+  const moving = updateMovement(dt, firing);
 
   player.root.position.set(player.x, 0, player.z);
   player.runBlend = THREE.MathUtils.damp(player.runBlend, moving ? 1 : 0, 18, dt);
   player.body.position.y = (Math.abs(Math.sin(player.runTime)) * 0.035 * player.runBlend + Math.sin(gameTime * 1.5) * 0.008 * (1 - player.runBlend)) * HERO_SCALE;
   player.body.rotation.z = Math.cos(player.runTime) * 0.025 * player.runBlend;
-  player.body.rotation.x = 0.07 * player.runBlend;
+  player.body.rotation.x = 0.07 * player.runBlend * THREE.MathUtils.clamp(player.moveSpeed / player.speed, -1, 1);
   animateHero(player.rig, player.runTime, player.runBlend);
 
-  const firing = keys.has('Space') || keys.has('Fire') || player.tapTimer > 0;
   player.tapTimer = Math.max(0, player.tapTimer - dt);
   // Each parcel starts at the hands, then follows its own ballistic trajectory.
   const spray = stream.update(dt, firing, player.rig.emitter, player, enemies);
@@ -304,9 +340,9 @@ function update(dt) {
     }
   } else pendingWave = 0;
 
-  const cameraTarget = new THREE.Vector3(player.x, CAMERA_LOOK_HEIGHT, player.z);
   camera.position.lerp(new THREE.Vector3(player.x, CAMERA_HEIGHT, player.z + CAMERA_DISTANCE), 1 - Math.exp(-2.5 * dt));
-  camera.lookAt(cameraTarget);
+  // Pan with a fixed viewing angle so movement does not swing the aiming view.
+  camera.lookAt(camera.position.x, CAMERA_LOOK_HEIGHT, camera.position.z - CAMERA_DISTANCE);
 }
 
 function updateHealth() {
@@ -325,13 +361,16 @@ function startGame() {
   player.x = 0;
   player.z = 0;
   player.dx = 0;
-  player.dz = 1;
+  player.dz = -1;
+  player.heading = Math.PI;
+  player.moveSpeed = 0;
+  player.turnSpeed = 0;
   player.runTime = 0;
   player.runBlend = 0;
   player.invulnerable = 0;
   player.fireTimer = 0;
   player.tapTimer = 0;
-  player.root.rotation.y = 0;
+  player.root.rotation.y = player.heading;
   player.root.position.set(0, 0, 0);
   player.model.material.opacity = 1;
   player.model.material.transparent = false;
@@ -364,6 +403,8 @@ function endGame() {
   playing = false;
   stream.clear();
   player.tapTimer = 0;
+  player.moveSpeed = 0;
+  player.turnSpeed = 0;
   finalScore.textContent = String(score).padStart(4, '0');
   endScreen.classList.remove('hidden');
   blip(80, 0.25);
@@ -399,7 +440,7 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'Enter' && !playing && !startScreen.classList.contains('hidden') && player.model) startGame();
 });
 window.addEventListener('keyup', (event) => keys.delete(event.code));
-window.addEventListener('blur', () => { keys.clear(); player.tapTimer = 0; });
+window.addEventListener('blur', () => { keys.clear(); player.tapTimer = 0; player.moveSpeed = 0; player.turnSpeed = 0; });
 window.addEventListener('resize', resize);
 canvas.addEventListener('pointerdown', (event) => {
   if (event.pointerType === 'mouse' && event.button === 0 && playing) { keys.add('Fire'); beginSpray(); }
