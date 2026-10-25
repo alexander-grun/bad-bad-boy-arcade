@@ -1,25 +1,18 @@
 import * as THREE from 'three';
 
-// Calibrated from the two leg centres in this STL. After this transform,
-// +Z is forward, X separates the legs, and Y is up.
-const MODEL_YAW = 1.1213316994321585;
-const MODEL_CENTRE = new THREE.Vector3(-0.0460918446, 0, -0.0564039229);
-const STREAM_SOURCE = new THREE.Vector3(0.023, 0.538, 0.15);
+// The prepared GLB is 1.5 units tall: +Z is forward, X separates the legs,
+// and Y is up. Its original UVs and colour material stay on the skinned mesh.
+const STREAM_SOURCE = new THREE.Vector3(-0.036, 0.534, 0.155);
 
 const LEG_JOINTS = [
   { hip: [-0.085, 0.50, 0.004], knee: [-0.119, 0.265, 0], ankle: [-0.140, 0.050, 0.016] },
   { hip: [0.095, 0.50, 0.004], knee: [0.119, 0.265, 0], ankle: [0.121, 0.050, 0.013] }
 ];
 
-export function createHero(geometry) {
-  geometry.computeBoundingBox();
-  const bounds = geometry.boundingBox;
-  geometry.translate(-(bounds.min.x + bounds.max.x) / 2, -(bounds.min.y + bounds.max.y) / 2, -bounds.min.z);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.scale(0.01, 0.01, 0.01);
-  geometry.rotateY(MODEL_YAW);
-  geometry.translate(-MODEL_CENTRE.x, 0, -MODEL_CENTRE.z);
-  geometry.computeVertexNormals();
+export function createHero(scene) {
+  const original = scene.getObjectByName('BadBadBoy');
+  if (!original?.isMesh) throw new Error('Prepared GLB does not contain the character mesh');
+  const geometry = original.geometry;
 
   const root = new THREE.Bone();
   root.name = 'body';
@@ -57,8 +50,7 @@ export function createHero(geometry) {
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
   geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
 
-  const material = new THREE.MeshStandardMaterial({ color: '#d0cfcf', roughness: 0.9, metalness: 0.01 });
-  const mesh = new THREE.SkinnedMesh(geometry, material);
+  const mesh = new THREE.SkinnedMesh(geometry, original.material);
   mesh.add(root);
   mesh.bind(new THREE.Skeleton(bones));
   mesh.castShadow = true;

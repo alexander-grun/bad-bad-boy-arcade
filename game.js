@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createHero, animateHero } from './hero.js';
 
-const MODEL_URL = './assets/bad-bad-boy.stl';
+const MODEL_URL = './assets/bad-bad-boy.glb';
 const ARENA_RADIUS = 8.4;
 const keys = new Set();
 const STREAM_LENGTH = 1.9;
@@ -124,9 +124,9 @@ let audioContext = null;
 let frameTime = 0;
 
 function loadHero() {
-  const loader = new STLLoader();
-  loader.load(MODEL_URL, (geometry) => {
-    player.rig = createHero(geometry);
+  const loader = new GLTFLoader();
+  loader.load(MODEL_URL, (gltf) => {
+    player.rig = createHero(gltf.scene);
     player.model = player.rig.mesh;
     player.body.add(player.model);
     status.classList.add('hidden');
@@ -137,7 +137,7 @@ function loadHero() {
       status.textContent = `Загружаю фигурку… ${Math.round(event.loaded / event.total * 100)}%`;
     }
   }, (error) => {
-    console.error('Could not load the player STL:', error);
+    console.error('Could not load the player GLB:', error);
     status.textContent = 'Не загрузилась фигурка. Запусти игру через локальный сервер.';
   });
 }

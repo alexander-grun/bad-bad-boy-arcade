@@ -1,0 +1,13 @@
+{
+  "name": "bad-bad-boy-arcade",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000 --bind 127.0.0.1",
+    "prepare-model": "node scripts/prepare-model.mjs"
+  },
+  "devDependencies": {
+    "sharp": "0.34.5"
+  }
+}
