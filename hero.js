@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 // The prepared GLB is 1.5 units tall: +Z is forward, X separates the legs,
 // and Y is up. Its original UVs and colour material stay on the skinned mesh.
+export const HERO_BASE_HEIGHT = 1.5;
 const STREAM_SOURCE = new THREE.Vector3(-0.036, 0.534, 0.155);
 
 const LEG_JOINTS = [

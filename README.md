@@ -15,11 +15,11 @@ Open [http://localhost:8000/](http://localhost:8000/). No build step or package 
 Controls: `WASD` or arrow keys to run and turn; hold the left mouse button or `Space` to spray. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
 
 The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
-The character is displayed at 1.5 times the prepared model's size, with the emitter and collision radius scaled to match.
+The character stands 8.5 game metres tall, scaling the prepared 1.5-metre model by 8.5 / 1.5. The emitter, collision radius, and liquid thickness match this size. The camera frames his full height, and the running animation follows the distance travelled with a stride proportional to his height.
 
 ## Liquid stream
 
-Hold the fire button for a pressurised stream about 6.4 game metres long on level ground (previously 1.9). It launches forward from the emitter under the character's hands, rises slightly, and falls along a gravity-driven parabola. The glossy surface pulses as it flows, breaks into droplets near the end, and splashes against enemies, walls, and the ground, with expanding rings on the pavement.
+Hold the fire button for a pressurised stream reaching about 12 game metres from the giant's elevated emitter on level ground. It launches forward from beneath the character's hands, rises slightly, and falls along a gravity-driven parabola. The glossy surface pulses as it flows, breaks into droplets near the end, and splashes against enemies, walls, and the ground, with expanding rings on the pavement. Its particle capacity covers the longer fall from this height; collisions account for obstacle height, allowing liquid to pass above benches and cars.
 
 Liquid already in flight keeps its own trajectory when the character turns. Releasing fire lets the remaining liquid fall. Collision and damage follow the actual liquid parcels, so the stream stops at the first enemy or obstacle. Hits deal 2 damage, at most once every 0.1 seconds per enemy, with stronger knockback.
 

@@ -21,8 +21,8 @@ export function createCity(scene) {
     if (!target.has(key)) target.set(key, { shape, color, glow, transforms: [] });
     target.get(key).transforms.push([x, y, z, sx, sy, sz, ry]);
   }
-  function obstacle(x, z, w, d) {
-    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+  function obstacle(x, z, w, d, height) {
+    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, height });
   }
   function surface(w, d, x, z, color, y = -0.035, texture = null) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color, map: texture, roughness: 0.94 }));
@@ -91,7 +91,7 @@ export function createCity(scene) {
       bounds: new THREE.Box3(),
     };
     const color = colors[buildingIndex++ % colors.length];
-    obstacle(x, z, w + 0.12, d + 0.12);
+    obstacle(x, z, w + 0.12, d + 0.12, h + 1);
     part('box', color, x, h / 2, z, w, h, d);
     part('box', '#87877e', x, 0.16, z, w + 0.08, 0.32, d + 0.08);
     part('box', '#e0d6c0', x, h - 0.14, z, w + 0.23, 0.22, d + 0.23);
@@ -135,7 +135,7 @@ export function createCity(scene) {
     part('box', '#33454b', x, 2.52, z, 0.4, 0.08, 0.4);
     part('box', '#ffe5a2', x, 2.7, z, 0.24, 0.3, 0.24, 0, true);
     part('box', '#33454b', x, 2.9, z, 0.4, 0.09, 0.4);
-    obstacle(x, z, 0.28, 0.28);
+    obstacle(x, z, 0.28, 0.28, 2.95);
   }
   function planter(x, z) {
     part('box', '#727a77', x, 0.22, z, 1.3, 0.44, 1.3);
@@ -143,7 +143,7 @@ export function createCity(scene) {
     part('cylinder', '#75513b', x, 1.1, z, 0.16, 1.4, 0.16);
     part('sphere', '#67845b', x, 2.15, z, 1.7, 2.1, 1.7);
     part('sphere', '#7d985f', x - 0.3, 2.65, z, 1.25, 1.2, 1.25);
-    obstacle(x, z, 1.3, 1.3);
+    obstacle(x, z, 1.3, 1.3, 3.25);
   }
   for (const s of [-1, 1]) {
     for (const x of [-5.7, 5.7]) lamp(x, s * 4.9);
@@ -153,14 +153,14 @@ export function createCity(scene) {
     part('box', '#a57c4d', s * 4.9, 0.44, 0, 0.55, 0.12, 1.6);
     part('box', '#a57c4d', s * 5.17, 0.74, 0, 0.08, 0.65, 1.6);
     for (const z of [-0.6, 0.6]) part('box', '#3b4849', s * 4.9, 0.2, z, 0.45, 0.4, 0.09);
-    obstacle(s * 4.95, 0, 0.7, 1.7);
+    obstacle(s * 4.95, 0, 0.7, 1.7, 1.1);
     // Parked cars along the east–west street.
     for (const x of [12, 17]) {
       const px = s * x, pz = 4.1;
       part('box', s > 0 ? '#cc8058' : '#6593a0', px, 0.46, pz, 1.8, 0.52, 0.85);
       part('box', '#384e59', px - 0.08, 0.86, pz, 0.95, 0.42, 0.7);
       for (const wheel of [-0.6, 0.6]) for (const side of [-1, 1]) part('sphere', '#30393e', px + wheel, 0.23, pz + side * 0.43, 0.4, 0.4, 0.18);
-      obstacle(px, pz, 1.9, 1);
+      obstacle(px, pz, 1.9, 1, 1.1);
     }
   }
   const squareSign = sign('BAD BAD BOY  /  HELSINKI', 0, 0.011, -5.1, 3.5, '#4b6267');
@@ -262,8 +262,8 @@ export function createCity(scene) {
   }
 
   const limit = 21.8;
-  function blocked(x, z, r = 0.4) {
-    return Math.abs(x) + r > limit || Math.abs(z) + r > limit || colliders.some(c => x + r > c.minX && x - r < c.maxX && z + r > c.minZ && z - r < c.maxZ);
+  function blocked(x, z, r = 0.4, y = null) {
+    return Math.abs(x) + r > limit || Math.abs(z) + r > limit || colliders.some(c => x + r > c.minX && x - r < c.maxX && z + r > c.minZ && z - r < c.maxZ && (y === null || (y + r > 0 && y - r < c.height)));
   }
   function move(entity, dx, dz, r) {
     const x = THREE.MathUtils.clamp(entity.x + dx, -limit + r, limit - r);
@@ -274,6 +274,14 @@ export function createCity(scene) {
   function lineClear(x, z, tx, tz, r = 0.5) {
     const steps = Math.ceil(Math.hypot(tx - x, tz - z) / 0.25);
     for (let i = 1; i <= steps; i++) if (blocked(x + (tx - x) * i / steps, z + (tz - z) * i / steps, r)) return false;
+    return true;
+  }
+  function lineClear3D(from, to, radius = 0) {
+    const steps = Math.max(1, Math.ceil(from.distanceTo(to) / 0.1));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      if (blocked(from.x + (to.x - from.x) * t, from.z + (to.z - from.z) * t, radius, from.y + (to.y - from.y) * t)) return false;
+    }
     return true;
   }
   // A shared flood field routes all enemies around buildings and street furniture.
@@ -320,5 +328,5 @@ export function createCity(scene) {
     for (let i = 0; i < cells; i++) if (distances[i] >= 5 && distances[i] <= 12) return coords(i);
     return { x: 0, z: 4 };
   }
-  return { move, routeTo, chase, spawnPoint, lineClear, updateVisibility };
+  return { move, routeTo, chase, spawnPoint, lineClear, lineClear3D, updateVisibility };
 }

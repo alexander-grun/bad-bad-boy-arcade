@@ -8,14 +8,16 @@ const GRAVITY = 5.2;
 const RADIUS = 0.035;
 const BREAKUP_TIME = 0.54;
 const HIT_INTERVAL = 0.1;
-const MAX_PARCELS = 160;
+const MAX_PARCELS = 360;
 const MAX_DROPS = 160;
 const SIDES = 8;
 const UP = new THREE.Vector3(0, 1, 0);
 
 // Flight, rendering, and damage all use the same parcels of liquid. Once a
 // parcel leaves the emitter, turning the character cannot redirect it.
-export function createLiquidStream(scene, city, onHit) {
+export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
+  const radius = RADIUS * scale;
+  const groundHeight = radius + 0.005;
   const parcels = [];
   const splashes = [];
   const origin = new THREE.Vector3();
@@ -34,7 +36,7 @@ export function createLiquidStream(scene, city, onHit) {
 
   const material = new THREE.MeshPhysicalMaterial({
     color: '#ffd34c', roughness: 0.12, metalness: 0,
-    transmission: 0.16, thickness: 0.07, ior: 1.333,
+    transmission: 0.16, thickness: radius * 2, ior: 1.333,
     clearcoat: 1, clearcoatRoughness: 0.06,
     transparent: true, opacity: 0.86, depthWrite: false,
   });
@@ -78,7 +80,7 @@ export function createLiquidStream(scene, city, onHit) {
         splashes.push({
           position: position.clone(),
           velocity: new THREE.Vector3(Math.cos(angle) * speed + velocity.x * 0.08, 0.6 + Math.random() * 1.5, Math.sin(angle) * speed + velocity.z * 0.08),
-          age: 0, life: 0.25 + Math.random() * 0.32, radius: 0.014 + Math.random() * 0.017,
+          age: 0, life: 0.25 + Math.random() * 0.32, radius: (0.014 + Math.random() * 0.017) * scale,
         });
       }
     }
@@ -95,8 +97,8 @@ export function createLiquidStream(scene, city, onHit) {
   function enemyContact(from, to, enemy) {
     const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
     const rx = from.x - enemy.x, ry = from.y - enemy.hitHeight, rz = from.z - enemy.z;
-    const radius = enemy.size + RADIUS;
-    const c = rx * rx + ry * ry + rz * rz - radius * radius;
+    const hitRadius = enemy.size + radius;
+    const c = rx * rx + ry * ry + rz * rz - hitRadius * hitRadius;
     if (c <= 0) return 0;
     const a = dx * dx + dy * dy + dz * dz;
     const b = rx * dx + ry * dy + rz * dz;
@@ -116,16 +118,16 @@ export function createLiquidStream(scene, city, onHit) {
       parcel.velocity.y -= GRAVITY * STEP;
       parcel.age += STEP;
       let contact = Infinity, target = null, ground = false;
-      if (parcel.position.y <= 0.025) {
-        contact = THREE.MathUtils.clamp((parcel.previous.y - 0.025) / (parcel.previous.y - parcel.position.y), 0, 1);
+      if (parcel.position.y <= groundHeight) {
+        contact = THREE.MathUtils.clamp((parcel.previous.y - groundHeight) / (parcel.previous.y - parcel.position.y), 0, 1);
         ground = true;
       }
-      if (!city.lineClear(parcel.previous.x, parcel.previous.z, parcel.position.x, parcel.position.z, RADIUS)) {
+      if (!city.lineClear3D(parcel.previous, parcel.position, radius)) {
         let lo = 0, hi = 1;
         for (let n = 0; n < 7; n++) {
           const mid = (lo + hi) / 2;
           impact.lerpVectors(parcel.previous, parcel.position, mid);
-          if (city.lineClear(parcel.previous.x, parcel.previous.z, impact.x, impact.z, RADIUS)) lo = mid;
+          if (city.lineClear3D(parcel.previous, impact, radius)) lo = mid;
           else hi = mid;
         }
         if (hi < contact) { contact = hi; ground = false; }
@@ -144,7 +146,7 @@ export function createLiquidStream(scene, city, onHit) {
           onHit(target, delta);
         }
         parcels.splice(i, 1);
-      } else if (parcel.age > 1.2) parcels.splice(i, 1);
+      } else if (parcel.age > 2) parcels.splice(i, 1);
     }
     for (let i = splashes.length - 1; i >= 0; i--) {
       const drop = splashes[i];
@@ -172,14 +174,14 @@ export function createLiquidStream(scene, city, onHit) {
       side.crossVectors(tangent, UP).normalize();
       normal.crossVectors(side, tangent).normalize();
       const pulse = 1 + 0.12 * Math.sin(id * 1.8 - time * 9) + 0.07 * Math.sin(id * 0.6 + time * 17);
-      const radius = RADIUS * pulse * (1 + age * 0.3);
+      const ringRadius = radius * pulse * (1 + age * 0.3);
       for (let j = 0; j < SIDES; j++) {
         const angle = j / SIDES * Math.PI * 2;
         radial.copy(side).multiplyScalar(Math.cos(angle)).addScaledVector(normal, Math.sin(angle));
         const offset = (ring * SIDES + j) * 3;
-        vertices[offset] = position.x + radial.x * radius;
-        vertices[offset + 1] = position.y + radial.y * radius;
-        vertices[offset + 2] = position.z + radial.z * radius;
+        vertices[offset] = position.x + radial.x * ringRadius;
+        vertices[offset + 1] = position.y + radial.y * ringRadius;
+        vertices[offset + 2] = position.z + radial.z * ringRadius;
         normals[offset] = radial.x; normals[offset + 1] = radial.y; normals[offset + 2] = radial.z;
       }
       if (previous && previous.batch === batchId && id === previous.id + 1 && previous.position.distanceToSquared(position) < 0.26 ** 2) {
@@ -193,11 +195,13 @@ export function createLiquidStream(scene, city, onHit) {
       previous = { position, id, batch: batchId };
       ring++;
     }
+    const flightTime = (LIFT + Math.sqrt(LIFT * LIFT + 2 * GRAVITY * Math.max(0, origin.y - groundHeight))) / GRAVITY;
+    const breakupTime = Math.max(BREAKUP_TIME, flightTime * 0.78);
     for (const parcel of parcels) {
-      if (parcel.age < BREAKUP_TIME) addRing(parcel.position, parcel.velocity, parcel.age, parcel.id, parcel.batch);
+      if (parcel.age < breakupTime) addRing(parcel.position, parcel.velocity, parcel.age, parcel.id, parcel.batch);
       else {
-        const radius = RADIUS * (0.7 + Math.sin(parcel.id * 2.1) * 0.18);
-        drawDrop(parcel.position, parcel.velocity, radius, dropCount++, 1.9);
+        const dropRadius = radius * (0.7 + Math.sin(parcel.id * 2.1) * 0.18);
+        drawDrop(parcel.position, parcel.velocity, dropRadius, dropCount++, 1.9);
       }
     }
     // The newest ring follows the actual emitter, even between physics steps.
@@ -217,7 +221,7 @@ export function createLiquidStream(scene, city, onHit) {
       const progress = ripple.age / 0.55;
       ripple.mesh.visible = progress < 1;
       if (progress < 1) {
-        ripple.mesh.scale.setScalar(0.07 + progress * 0.35);
+        ripple.mesh.scale.setScalar((0.07 + progress * 0.35) * scale);
         ripple.mesh.material.opacity = 0.4 * (1 - progress);
       }
     }

@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createHero, animateHero } from './hero.js';
+import { createHero, animateHero, HERO_BASE_HEIGHT } from './hero.js';
 import { createCity } from './city.js';
 import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enemies.js';
 import { createLiquidStream } from './liquid.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb';
-const HERO_SCALE = 1.5;
+const HERO_HEIGHT = 8.5;
+const HERO_SCALE = HERO_HEIGHT / HERO_BASE_HEIGHT;
+const CAMERA_HEIGHT = HERO_HEIGHT + 4.5;
+const CAMERA_DISTANCE = 16;
+const CAMERA_LOOK_HEIGHT = HERO_HEIGHT * 0.4;
 const keys = new Set();
 
 const canvas = document.querySelector('#game');
@@ -34,8 +38,8 @@ scene.background = new THREE.Color('#7c929f');
 scene.fog = new THREE.Fog('#7c929f', 25, 65);
 
 const camera = new THREE.PerspectiveCamera(47, 1, 0.1, 100);
-camera.position.set(0, 10, 12);
-camera.lookAt(0, 0, 0);
+camera.position.set(0, CAMERA_HEIGHT, CAMERA_DISTANCE);
+camera.lookAt(0, CAMERA_LOOK_HEIGHT, 0);
 
 scene.add(new THREE.HemisphereLight(0xd8e9ff, 0x757264, 2.3));
 const keyLight = new THREE.DirectionalLight(0xffdfad, 2.6);
@@ -78,7 +82,7 @@ const stream = createLiquidStream(scene, city, (enemy, direction) => {
   city.move(enemy, direction.x * 0.38, direction.z * 0.38, enemy.size);
   enemy.root.position.set(enemy.x, 0, enemy.z);
   if (enemy.hp <= 0) removeEnemy(enemy, true);
-});
+}, { scale: HERO_HEIGHT / 2.25 });
 
 const enemies = [];
 const effects = [];
@@ -193,16 +197,18 @@ function update(dt) {
     const vz = zAxis / length;
     const oldX = player.x, oldZ = player.z;
     city.move(player, vx * player.speed * dt, vz * player.speed * dt, player.radius);
-    moving = Math.hypot(player.x - oldX, player.z - oldZ) > 0.001;
+    const travelled = Math.hypot(player.x - oldX, player.z - oldZ);
+    moving = travelled > 0.001;
     player.dx = vx;
     player.dz = vz;
     player.root.rotation.y = Math.atan2(vx, vz);
-    player.runTime += dt * 11;
+    // Longer legs take longer strides; pace the gait by actual distance moved.
+    player.runTime += travelled * Math.PI * 2 / (HERO_HEIGHT * 0.45);
   }
 
   player.root.position.set(player.x, 0, player.z);
   player.runBlend = THREE.MathUtils.damp(player.runBlend, moving ? 1 : 0, 18, dt);
-  player.body.position.y = Math.abs(Math.sin(player.runTime)) * 0.035 * player.runBlend + Math.sin(gameTime * 1.5) * 0.008 * (1 - player.runBlend);
+  player.body.position.y = (Math.abs(Math.sin(player.runTime)) * 0.035 * player.runBlend + Math.sin(gameTime * 1.5) * 0.008 * (1 - player.runBlend)) * HERO_SCALE;
   player.body.rotation.z = Math.cos(player.runTime) * 0.025 * player.runBlend;
   player.body.rotation.x = 0.07 * player.runBlend;
   animateHero(player.rig, player.runTime, player.runBlend);
@@ -287,8 +293,8 @@ function update(dt) {
     }
   } else pendingWave = 0;
 
-  const cameraTarget = new THREE.Vector3(player.x, 0, player.z);
-  camera.position.lerp(new THREE.Vector3(player.x, 10, player.z + 12), 1 - Math.exp(-2.5 * dt));
+  const cameraTarget = new THREE.Vector3(player.x, CAMERA_LOOK_HEIGHT, player.z);
+  camera.position.lerp(new THREE.Vector3(player.x, CAMERA_HEIGHT, player.z + CAMERA_DISTANCE), 1 - Math.exp(-2.5 * dt));
   camera.lookAt(cameraTarget);
 }
 
@@ -317,7 +323,8 @@ function startGame() {
   player.root.position.set(0, 0, 0);
   player.model.material.opacity = 1;
   player.model.material.transparent = false;
-  camera.position.set(0, 10, 12);
+  camera.position.set(0, CAMERA_HEIGHT, CAMERA_DISTANCE);
+  camera.lookAt(0, CAMERA_LOOK_HEIGHT, 0);
   animateHero(player.rig, 0, 0);
   scoreLabel.textContent = '0000';
   updateHealth();
@@ -362,7 +369,7 @@ function animate(now) {
   const dt = Math.min(0.05, frameTime ? (now - frameTime) / 1000 : 0);
   frameTime = now;
   update(dt);
-  if (player.model) city.updateVisibility(camera, player.root, 1.5 * HERO_SCALE, dt);
+  if (player.model) city.updateVisibility(camera, player.root, HERO_HEIGHT, dt);
   renderer.render(scene, camera);
 }
 
