@@ -5,7 +5,7 @@ export function createBiteEffects(scene) {
   const capacity = 64;
   const mesh = new THREE.InstancedMesh(
     new THREE.SphereGeometry(1, 7, 5),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .95, depthWrite: false, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .7, depthWrite: false, toneMapped: false }),
     capacity
   );
   mesh.name = 'red-bite-splashes';
@@ -18,7 +18,7 @@ export function createBiteEffects(scene) {
   const particles = [];
   const dummy = new THREE.Object3D();
   const up = new THREE.Vector3(0, 1, 0), direction = new THREE.Vector3();
-  const colours = [0xff253b, 0xe81730, 0xb90d25];
+  const colours = [0xbd7470, 0xae6569, 0x965b65];
 
   function update(dt) {
     if (!particles.length) { mesh.count = 0; return; }
@@ -43,11 +43,11 @@ export function createBiteEffects(scene) {
       dummy.position.copy(particle.position);
       if (particle.landed) {
         dummy.quaternion.identity();
-        dummy.scale.set(size * 1.8, size * .18, size * 1.8);
+        dummy.scale.set(size * 1.35, size * .18, size * 1.35);
       } else {
         direction.copy(particle.velocity).normalize();
         dummy.quaternion.setFromUnitVectors(up, direction);
-        dummy.scale.set(size, size * 1.65, size);
+        dummy.scale.set(size, size * 1.3, size);
       }
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
@@ -71,7 +71,7 @@ export function createBiteEffects(scene) {
           1.3 + Math.random() * 1.9,
           outward.z * speed + outward.x * sideways
         ),
-        radius: (.024 + Math.random() * .023) * scale,
+        radius: (.012 + Math.random() * .0115) * scale,
         colour: new THREE.Color(colours[i % colours.length]),
         life: 1.4 + Math.random() * .15,
         landed: false
