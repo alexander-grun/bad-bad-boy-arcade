@@ -9,6 +9,7 @@ const MAX_LIFT = 1.1;
 const CHARGE_TIME = 1.2;
 const GRAVITY = 5.2;
 const RADIUS = 0.035;
+const VISUAL_WIDTH = 0.78;
 const SPLASH_RADIUS = 0.45;
 const HIT_INTERVAL = 0.1;
 const MAX_PARCELS = 360;
@@ -20,6 +21,8 @@ const UP = new THREE.Vector3(0, 1, 0);
 // parcel leaves the emitter, turning the character cannot redirect it.
 export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
   const radius = RADIUS * scale;
+  // Tune the appearance separately from the collision and aiming radius.
+  const visualRadius = radius * VISUAL_WIDTH;
   const groundHeight = radius + 0.005;
   const parcels = [];
   const splashes = [];
@@ -45,7 +48,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
 
   const material = new THREE.MeshPhysicalMaterial({
     color: '#ffd34c', roughness: 0.12, metalness: 0,
-    transmission: 0.16, thickness: radius * 2, ior: 1.333,
+    transmission: 0.16, thickness: visualRadius * 2, ior: 1.333,
     clearcoat: 1, clearcoatRoughness: 0.06,
     transparent: true, opacity: 0.86, depthWrite: false,
   });
@@ -130,7 +133,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
         splashes.push({
           position: position.clone(),
           velocity: new THREE.Vector3(Math.cos(angle) * speed + velocity.x * 0.08, 0.6 + Math.random() * 1.5, Math.sin(angle) * speed + velocity.z * 0.08),
-          age: 0, life: 0.25 + Math.random() * 0.32, radius: (0.014 + Math.random() * 0.017) * scale,
+          age: 0, life: 0.25 + Math.random() * 0.32, radius: (0.014 + Math.random() * 0.017) * scale * VISUAL_WIDTH,
         });
       }
     }
@@ -239,7 +242,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
       side.crossVectors(tangent, UP).normalize();
       normal.crossVectors(side, tangent).normalize();
       const pulse = 1 + 0.12 * Math.sin(id * 1.8 - time * 9) + 0.07 * Math.sin(id * 0.6 + time * 17);
-      const ringRadius = radius * pulse * (1 + age * 0.3);
+      const ringRadius = visualRadius * pulse * (1 + age * 0.3);
       for (let j = 0; j < SIDES; j++) {
         const angle = j / SIDES * Math.PI * 2;
         radial.copy(side).multiplyScalar(Math.cos(angle)).addScaledVector(normal, Math.sin(angle));
@@ -263,7 +266,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
     for (const parcel of parcels) {
       if (parcel.age < parcel.breakupTime) addRing(parcel.position, parcel.velocity, parcel.age, parcel.id, parcel.batch);
       else {
-        const dropRadius = radius * (0.7 + Math.sin(parcel.id * 2.1) * 0.18);
+        const dropRadius = visualRadius * (0.7 + Math.sin(parcel.id * 2.1) * 0.18);
         drawDrop(parcel.position, parcel.velocity, dropRadius, dropCount++, 1.9);
       }
     }
