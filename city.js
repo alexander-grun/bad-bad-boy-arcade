@@ -103,7 +103,7 @@ export function createCity(scene) {
     part('box', '#31434a', x, 0.6, front + 0.1, 0.8, 1.2, 0.15);
     if (buildingIndex % 3 === 0) {
       part('box', '#385f5a', x, 1.3, front + 0.45, w * 0.75, 0.18, 0.9);
-      sign(['KAHVILA', 'KIOSKI', 'LEIPOMO'][Math.floor(buildingIndex / 3) % 3], x, 1.65, front + 0.12, w * 0.7);
+      sign(['CAFE', 'KIOSK', 'BAKERY'][Math.floor(buildingIndex / 3) % 3], x, 1.65, front + 0.12, w * 0.7);
     }
   }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -148,7 +148,7 @@ export function createCity(scene) {
       obstacle(px, pz, 1.9, 1);
     }
   }
-  const squareSign = sign('PAHA POIKA  /  HELSINKI', 0, 0.011, -5.1, 3.5, '#4b6267');
+  const squareSign = sign('BAD BAD BOY  /  HELSINKI', 0, 0.011, -5.1, 3.5, '#4b6267');
   squareSign.rotation.x = -Math.PI / 2;
   // Physical bollards and painted edges communicate the playable boundary.
   for (let n = -20; n <= 20; n += 2) for (const s of [-1, 1]) {

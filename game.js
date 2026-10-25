@@ -95,7 +95,7 @@ let frameTime = 0;
 
 async function loadModels() {
   try {
-    status.textContent = 'Загружаю героя, слизней и улиток…';
+    status.textContent = 'Loading the hero, slimes, and snails…';
     const [gltf] = await Promise.all([
       new GLTFLoader().loadAsync(MODEL_URL),
       loadEnemyModels(),
@@ -105,10 +105,10 @@ async function loadModels() {
     player.body.add(player.model);
     status.classList.add('hidden');
     startButton.disabled = false;
-    startButton.textContent = 'НАЧАТЬ ИГРУ';
+    startButton.textContent = 'START GAME';
   } catch (error) {
     console.error('Could not load game models:', error);
-    status.textContent = 'Не загрузились модели. Обнови страницу с запущенным локальным сервером.';
+    status.textContent = 'Could not load the models. Start the local server, then refresh the page.';
   }
 }
 
@@ -130,7 +130,7 @@ function spawnWave(level) {
     const point = city.spawnPoint(player, i, count);
     makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'snail' : 'slime');
   }
-  if (level > 1) showToast(`ВОЛНА ${level}`);
+  if (level > 1) showToast(`WAVE ${level}`);
 }
 
 function removeEnemy(enemy, pop = false) {

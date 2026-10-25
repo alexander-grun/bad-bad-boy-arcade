@@ -1,47 +1,47 @@
-# Bad Bad Boy: Золотой залп
+# Bad Bad Boy: Golden Shower
 
-Браузерная аркада с фигуркой Helsinki Bad Bad Boy. Модель с цветной текстурой включена в репозиторий: `assets/bad-bad-boy.glb`.
+A browser arcade game starring Helsinki's Bad Bad Boy sculpture. The textured character model is included in the repository: `assets/bad-bad-boy.glb`.
 
-## Запуск
+## Run locally
 
-Из корня репозитория запусти локальный сервер:
+Start a local server from the repository root:
 
 ```bash
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Открой [http://localhost:8000/](http://localhost:8000/). Сборка и установка пакетов не нужны. Three.js загружается с jsDelivr, поэтому для первого запуска нужен интернет.
+Open [http://localhost:8000/](http://localhost:8000/). No build step or package installation is needed. Three.js loads from jsDelivr, so the first launch requires an internet connection.
 
-Управление: `WASD` или стрелки — бег и поворот, зажатая левая кнопка мыши или `Пробел` — струя. Фигурка смотрит по ходу бега и всегда стреляет вперёд из точки под сведёнными руками. На остановке сохраняет последний поворот. На телефоне доступны экранные кнопки движения и огня. Слизни бегут к герою; попадай струёй, чтобы очистить волну и набрать очки.
+Controls: `WASD` or arrow keys to run and turn; hold the left mouse button or `Space` to spray. The character faces the direction of travel and sprays forward from beneath his joined hands. He keeps his last facing direction when stopped. Touch controls are available on mobile. Hit the approaching enemies to clear waves and earn points.
 
-У модели выровнены оси; ноги анимируются скелетом с суставами в бёдрах, коленях и стопах.
+The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
 
-## Квартал и враги
+## City and enemies
 
-Действие проходит в небольшом квартале с мощёной площадью, переходами, трамвайными рельсами, кафе, деревьями и машинами. Дома и уличная мебель имеют коллизии; враги обходят препятствия по общей навигационной сетке. Струя не проходит сквозь препятствия.
+The game takes place in a small neighbourhood with a cobbled square, pedestrian crossings, tram tracks, cafes, trees, and parked cars. Buildings and street furniture have collision boundaries. Enemies navigate around obstacles using a shared navigation grid. The stream cannot pass through obstacles.
 
-В волнах встречаются два вида врагов: быстрые анимированные слизни и медленные, более живучие улитки. За слизня даётся 100 очков, за улитку — 150. Используются бесплатные модели с открытыми лицензиями: Slime от Quaternius (CC0) и Snail от Poly by Google (CC BY 3.0). Источники, лицензии и изменения перечислены в [CREDITS.md](./CREDITS.md) и на экране «Модели и авторы».
+Waves contain fast, animated slimes and slower, tougher snails. A slime is worth 100 points; a snail is worth 150. Both enemy models are free and openly licensed: Slime by Quaternius (CC0) and Snail by Poly by Google (CC BY 3.0). Sources, licences, and modifications are listed in [CREDITS.md](./CREDITS.md) and the in-game Models & credits page.
 
-## Файлы
+## Files
 
-- `index.html` и `style.css` — экран игры и управление.
-- `game.js` — движение, волны, попадания и управление.
-- `city.js` — окружение, коллизии и навигация.
-- `enemies.js` — загрузка и анимация моделей слизней и улиток.
-- `hero.js` — подготовка модели, анимация и точка выхода струи.
-- `assets/bad-bad-boy.glb` — фигурка без подставки, с UV и цветным атласом 2048×2048.
-- `assets/enemies/` — оригинальные GLB врагов с материалами и анимациями.
-- `scripts/prepare-model.mjs` — подготовка игрового GLB из исходного файла.
+- `index.html` and `style.css`: game interface and controls.
+- `game.js`: movement, waves, damage, and input.
+- `city.js`: environment, collisions, and navigation.
+- `enemies.js`: loading and animating the slime and snail models.
+- `hero.js`: character rig, animation, and stream emitter.
+- `assets/bad-bad-boy.glb`: character without its stand, with UVs and a 2048 × 2048 colour atlas.
+- `assets/enemies/`: original enemy GLBs with materials and animations.
+- `scripts/prepare-model.mjs`: prepare the game GLB from the source model.
 
-## Подготовка модели
+## Prepare the character model
 
-Игровая модель получена из `bc222867938641be8050f747614e5d34.glb`. В исходном файле цветной атлас 8000×8000 ошибочно привязан как normal map. Скрипт исправляет его на base color, уменьшает до 2048×2048, сохраняет UV и нормали, убирает подставку и отдельную плоскость, выравнивает модель для скелета.
+The game model was derived from `bc222867938641be8050f747614e5d34.glb`. The source file incorrectly assigns its 8000 × 8000 colour atlas as a normal map. The preparation script reassigns it to base colour, resizes it to 2048 × 2048, preserves UVs and normals, removes the stand and separate plane, and aligns the model for its skeleton.
 
-Для повторной подготовки нужны Node.js и зависимости:
+To prepare it again, install Node.js and the development dependencies:
 
 ```bash
 npm ci
-npm run prepare-model -- /путь/к/bc222867938641be8050f747614e5d34.glb
+npm run prepare-model -- /path/to/bc222867938641be8050f747614e5d34.glb
 ```
 
-Обычный запуск игры использует уже готовый GLB и установки зависимостей не требует.
+Normal gameplay uses the prepared GLB and does not require installing dependencies.

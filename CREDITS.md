@@ -1,25 +1,25 @@
-# Модели и авторы
+# Models and credits
 
-## Слизень
+## Slime
 
-- **Slime** — **Quaternius**.
-- Источник: https://poly.pizza/m/LyjSUKHKnh
-- Лицензия: **CC0 1.0 Universal**, https://creativecommons.org/publicdomain/zero/1.0/
-- Файл: `assets/enemies/slime.glb`.
-- В игре изменены масштаб, ориентация и параметры материала. Используются оригинальные скелетные анимации ходьбы и атаки. Сам GLB сохранён без изменений.
+- **Slime** by **Quaternius**.
+- Source: https://poly.pizza/m/LyjSUKHKnh
+- Licence: **CC0 1.0 Universal**, https://creativecommons.org/publicdomain/zero/1.0/
+- File: `assets/enemies/slime.glb`.
+- In-game changes: scale, orientation, and material settings. The original skeletal walk and attack animations are used. The GLB file itself is unchanged.
 
-## Улитка
+## Snail
 
-- **Snail** — **Poly by Google**.
-- Источник: https://poly.pizza/m/aZ_cT-AIu2y
-- Лицензия: **Creative Commons Attribution 3.0 Unported (CC BY 3.0)**, https://creativecommons.org/licenses/by/3.0/
-- Файл: `assets/enemies/snail.glb`.
-- В игре изменены масштаб, положение и параметры материала, добавлено процедурное покачивание при ползании. Геометрия и текстура в GLB сохранены без изменений.
+- **Snail** by **Poly by Google**.
+- Source: https://poly.pizza/m/aZ_cT-AIu2y
+- Licence: **Creative Commons Attribution 3.0 Unported (CC BY 3.0)**, https://creativecommons.org/licenses/by/3.0/
+- File: `assets/enemies/snail.glb`.
+- In-game changes: scale, position, material settings, and a procedural crawling sway. The geometry and texture in the GLB are unchanged.
 
-Указание авторства и лицензии улитки нужно сохранять при распространении игры. Лицензии выше относятся к соответствующим моделям, а не ко всему проекту.
+Retain the snail's attribution and licence when distributing the game. These licences apply to the respective enemy models, not to the entire project.
 
-## Герой и окружение
+## Hero and environment
 
-Bad Bad Boy — скульптура Tommi Toija в Хельсинки. Игровая модель подготовлена из предоставленного пользователем файла `bc222867938641be8050f747614e5d34.glb`; этот файл не относится к указанным выше лицензиям слизня и улитки.
+Bad Bad Boy is a sculpture by Tommi Toija in Helsinki. The game character was prepared from the user-provided `bc222867938641be8050f747614e5d34.glb`; it is not covered by the slime and snail licences above.
 
-Городское окружение создаётся кодом в `city.js`. Three.js: https://threejs.org/ (MIT).
+The city environment is generated in `city.js`. Three.js: https://threejs.org/ (MIT).
