@@ -19,7 +19,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 
 // Flight, rendering, and damage all use the same parcels of liquid. Once a
 // parcel leaves the emitter, turning the character cannot redirect it.
-export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
+export function createLiquidStream(scene, city, onHit, { scale = 1, refraction = true } = {}) {
   const radius = RADIUS * scale;
   // Tune the appearance separately from the collision and aiming radius.
   const visualRadius = radius * VISUAL_WIDTH;
@@ -48,7 +48,9 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
 
   const material = new THREE.MeshPhysicalMaterial({
     color: '#ffd34c', roughness: 0.12, metalness: 0,
-    transmission: 0.16, thickness: visualRadius * 2, ior: 1.333,
+    // Transmission requires another scene render. Touch devices keep the
+    // glossy coating and alpha transparency without that extra pass.
+    transmission: refraction ? 0.16 : 0, thickness: visualRadius * 2, ior: 1.333,
     clearcoat: 1, clearcoatRoughness: 0.06,
     transparent: true, opacity: 0.86, depthWrite: false,
   });
@@ -62,12 +64,15 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
   geometry.setDrawRange(0, 0);
   const surface = new THREE.Mesh(geometry, material);
   surface.frustumCulled = false;
+  surface.visible = false;
   scene.add(surface);
 
   const droplets = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), material, MAX_DROPS + MAX_PARCELS);
   droplets.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   droplets.frustumCulled = false;
   droplets.count = 0;
+  // A visible zero-count mesh still enables Three.js's transmission pass.
+  droplets.visible = false;
   scene.add(droplets);
 
   const landingMarker = new THREE.Mesh(
@@ -276,12 +281,15 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
     }
     for (const drop of splashes) drawDrop(drop.position, drop.velocity, drop.radius * (1 - drop.age / drop.life * 0.5), dropCount++);
     geometry.setDrawRange(0, indexCount);
-    geometry.attributes.position.needsUpdate = true;
-    geometry.attributes.normal.needsUpdate = true;
-    geometry.index.needsUpdate = true;
+    if (indexCount > 0) {
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.normal.needsUpdate = true;
+      geometry.index.needsUpdate = true;
+    }
     surface.visible = indexCount > 0;
     droplets.count = dropCount;
-    droplets.instanceMatrix.needsUpdate = true;
+    droplets.visible = dropCount > 0;
+    if (dropCount > 0) droplets.instanceMatrix.needsUpdate = true;
     for (const ripple of ripples) {
       const progress = ripple.age / 0.55;
       ripple.mesh.visible = progress < 1;
@@ -333,7 +341,7 @@ export function createLiquidStream(scene, city, onHit, { scale = 1 } = {}) {
     parcels.length = splashes.length = 0;
     accumulator = emission = 0; wasFiring = false;
     heldTime = 0; state.charge = 0; state.blocked = false;
-    surface.visible = false; droplets.count = 0;
+    surface.visible = false; droplets.count = 0; droplets.visible = false;
     landingMarker.visible = false;
     for (const ripple of ripples) { ripple.age = 1; ripple.mesh.visible = false; }
   }

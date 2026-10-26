@@ -99,7 +99,7 @@ const stream = createLiquidStream(scene, city, (enemy, direction) => {
   city.move(enemy, direction.x * 0.38, direction.z * 0.38, enemy.size);
   enemy.root.position.set(enemy.x, 0, enemy.z);
   if (enemy.hp <= 0) removeEnemy(enemy, true);
-}, { scale: HERO_HEIGHT / 2.25 });
+}, { scale: HERO_HEIGHT / 2.25, refraction: !window.matchMedia('(pointer: coarse)').matches });
 
 const enemies = [];
 const effects = [];

@@ -37,6 +37,8 @@ The ground ring previews the landing point, and the spray range meter shows the 
 
 Liquid already in flight keeps its own trajectory when the character turns or the pressure changes. Releasing fire lets the remaining liquid fall. Collision and damage follow the actual liquid parcels, so the stream stops at the first enemy or obstacle. Hits deal 2 damage, at most once every 0.1 seconds per enemy, with stronger knockback.
 
+On devices with a coarse primary pointer, the stream keeps its glossy coating and alpha transparency with refraction disabled, avoiding an extra scene render. Empty stream and droplet meshes stay hidden on all devices, and their GPU buffers upload only when they contain visible geometry. These rendering choices do not change the stream's physics, range, or damage.
+
 ## City and enemies
 
 The game takes place in a small neighbourhood with a cobbled square, pedestrian crossings, tram tracks, cafes, trees, and parked cars. Buildings and street furniture have collision boundaries. Enemies navigate around obstacles using a shared navigation grid. The stream cannot pass through obstacles.
