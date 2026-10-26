@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#12151f" />
     <title>Golden Blast — Bad Bad Boy Arcade</title>
-    <link rel="stylesheet" href="./style.css?v=20261026-no-select1" />
+    <link rel="stylesheet" href="./style.css?v=20261026-controls1" />
     <script type="importmap">
       {
         "imports": {
           "three": "./vendor/three-0.180.0/build/three.module.min.js",
           "three/addons/": "./vendor/three-0.180.0/examples/jsm/",
-          "game": "./game.js?v=20261026-liquid-perf1",
+          "game": "./game.js?v=20261026-controls1",
+          "./movement.js": "./movement.js?v=20261026-controls1",
           "./touch-controls.js": "./touch-controls.js?v=20261026-joystick1",
           "./hero.js": "./hero.js?v=20261025-medkits1",
           "./city.js": "./city.js?v=20261025-medkits1",
@@ -41,7 +42,12 @@
           <div class="eyebrow">TROUBLE IN THE CITY • HELSINKI</div>
           <h1>GOLDEN<br /><span>BLAST</span></h1>
           <p>Snails and slimes have taken over the block! Run through the streets, face your enemies, and let the golden stream fly.</p>
-          <div class="keys"><kbd>↑ ↓</kbd><span>forward / back</span><kbd>← →</kbd><span>turn</span><kbd>SHIFT</kbd><span>fine aim</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
+          <div class="control-setting">
+            <label for="start-control-mode">MOVEMENT</label>
+            <select id="start-control-mode" data-control-mode><option value="direct">Direct movement</option><option value="tank">Tank controls</option></select>
+            <p data-control-description>Move and face the direction you press or drag. Reverse direction immediately.</p>
+          </div>
+          <div class="keys"><kbd>ARROWS / WASD</kbd><span id="movement-description">move and aim</span><kbd>SHIFT</kbd><span>slow</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
           <p class="touch-instructions">Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap for nearby enemies; hold to reach farther.</p>
           <div id="load-status" class="load-status" role="status">Loading models…</div>
           <button id="start" class="primary-button" type="button" disabled>LOADING…</button>
@@ -60,6 +66,18 @@
           <button id="restart" class="primary-button" type="button">PLAY AGAIN</button>
         </div>
       </section>
+
+      <button id="open-controls" class="controls-button" type="button" aria-haspopup="dialog" aria-controls="controls-dialog" hidden>CONTROLS</button>
+      <dialog id="controls-dialog" class="card controls-card" aria-labelledby="controls-title">
+        <div class="eyebrow">GAME PAUSED</div>
+        <h2 id="controls-title">CONTROLS</h2>
+        <div class="control-setting">
+          <label for="game-control-mode">MOVEMENT</label>
+          <select id="game-control-mode" data-control-mode><option value="direct">Direct movement</option><option value="tank">Tank controls</option></select>
+          <p data-control-description>Move and face the direction you press or drag. Reverse direction immediately.</p>
+        </div>
+        <form method="dialog"><button class="primary-button" type="submit">BACK TO GAME</button></form>
+      </dialog>
 
       <div class="range-hud" aria-label="Spray range">
         <div>SPRAY RANGE <strong id="spray-range">NEAR</strong></div>

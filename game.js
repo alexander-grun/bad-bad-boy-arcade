@@ -7,6 +7,7 @@ import { createLiquidStream } from './liquid.js';
 import { createBiteEffects } from './bites.js';
 import { createMedkits } from './medkits.js';
 import { createTouchControls } from './touch-controls.js';
+import { movePlayer } from './movement.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
@@ -16,6 +17,10 @@ const CAMERA_HEIGHT = 10;
 const CAMERA_DISTANCE = 12;
 const CAMERA_LOOK_HEIGHT = HERO_HEIGHT * 0.4;
 const keys = new Set();
+let controlMode = 'direct';
+try {
+  if (localStorage.getItem('golden-blast-controls') === 'tank') controlMode = 'tank';
+} catch { /* Settings still work when browser storage is unavailable. */ }
 
 const canvas = document.querySelector('#game');
 const status = document.querySelector('#load-status');
@@ -30,6 +35,8 @@ const finalScore = document.querySelector('#final-score');
 const toast = document.querySelector('#toast');
 const sprayRange = document.querySelector('#spray-range');
 const pressureFill = document.querySelector('#pressure-fill');
+const controlsDialog = document.querySelector('#controls-dialog');
+const controlsButton = document.querySelector('#open-controls');
 const touchControls = createTouchControls({
   zone: document.querySelector('#joystick-zone'),
   stick: document.querySelector('#joystick'),
@@ -273,57 +280,11 @@ function blip(frequency, duration) {
 }
 
 function updateMovement(dt, firing) {
-  const forward = Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'));
-  const turn = Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft'));
-  const usingArrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(key => keys.has(key));
-  const touch = touchControls.input;
-  const touchStrength = Math.hypot(touch.x, touch.z);
-  const worldX = touchStrength ? touch.x : Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
-  const worldZ = touchStrength ? touch.z : Number(keys.has('KeyS')) - Number(keys.has('KeyW'));
-  const precise = keys.has('ShiftLeft') || keys.has('ShiftRight');
-  const maxSpeed = player.speed * (precise ? 0.4 : firing ? 0.7 : 1);
-  const turnRate = precise ? 0.65 : firing ? 1.7 : 3.2;
-  let throttle = 0, targetTurnSpeed = 0, angleRemaining = null;
-
-  if (usingArrows) {
-    // Steering is continuous: releasing left/right preserves this exact angle.
-    throttle = forward;
-    targetTurnSpeed = -turn * turnRate;
-  } else if (worldX || worldZ) {
-    const targetHeading = Math.atan2(worldX, worldZ);
-    angleRemaining = Math.atan2(Math.sin(targetHeading - player.heading), Math.cos(targetHeading - player.heading));
-    targetTurnSpeed = THREE.MathUtils.clamp(angleRemaining * 14, -turnRate * 2, turnRate * 2);
-    // Finish facing the requested direction before accelerating into a U-turn.
-    throttle = Math.max(0, Math.cos(angleRemaining)) * (touchStrength || 1);
-  }
-
-  if (targetTurnSpeed) {
-    const decay = Math.exp(-18 * dt);
-    const angleStep = targetTurnSpeed * dt + (player.turnSpeed - targetTurnSpeed) * (1 - decay) / 18;
-    player.turnSpeed = targetTurnSpeed + (player.turnSpeed - targetTurnSpeed) * decay;
-    player.heading += angleRemaining === null ? angleStep : THREE.MathUtils.clamp(angleStep, -Math.abs(angleRemaining), Math.abs(angleRemaining));
-  } else player.turnSpeed = 0;
-  player.heading = Math.atan2(Math.sin(player.heading), Math.cos(player.heading));
-  player.dx = Math.sin(player.heading);
-  player.dz = Math.cos(player.heading);
-  player.root.rotation.y = player.heading;
-
-  const targetSpeed = throttle * maxSpeed;
-  const damping = throttle ? 14 : 24;
-  const decay = Math.exp(-damping * dt);
-  const distance = targetSpeed * dt + (player.moveSpeed - targetSpeed) * (1 - decay) / damping;
-  player.moveSpeed = targetSpeed + (player.moveSpeed - targetSpeed) * decay;
-  if (!throttle && Math.abs(player.moveSpeed) < 0.015) player.moveSpeed = 0;
-  const oldX = player.x, oldZ = player.z;
-  city.move(player, player.dx * distance, player.dz * distance, player.radius);
-  const travelled = Math.hypot(player.x - oldX, player.z - oldZ);
-  if (Math.abs(distance) > 0.0001 && travelled < Math.abs(distance) * 0.1) player.moveSpeed = 0;
-  // Both movement and the stream use the actual facing direction; no strafing.
-  player.runTime += Math.sign(distance) * travelled * Math.PI * 2 / (HERO_HEIGHT * 0.45);
-  return travelled > 0.0001;
+  return movePlayer(player, city, { keys, touch: touchControls.input, mode: controlMode, dt, firing, height: HERO_HEIGHT });
 }
 
 function update(dt) {
+  if (controlsDialog.open) return;
   gameTime += dt;
   // Finish the final bite's splash even after the round ends.
   biteEffects.update(dt);
@@ -471,6 +432,7 @@ function startGame() {
   medkits.reset(player);
   spawnWave(1);
   playing = true;
+  controlsButton.hidden = false;
   touchControls.setEnabled(true);
   startScreen.classList.add('hidden');
   endScreen.classList.add('hidden');
@@ -494,6 +456,7 @@ function clearArena() {
 
 function endGame() {
   playing = false;
+  controlsButton.hidden = true;
   touchControls.setEnabled(false);
   stream.clear();
   player.tapTimer = 0;
@@ -527,7 +490,48 @@ function beginSpray() {
   stream.resetPressure();
 }
 
+function resetInput() {
+  keys.clear();
+  touchControls.reset();
+  player.tapTimer = 0;
+  player.moveSpeed = 0;
+  player.turnSpeed = 0;
+}
+
+function syncControlMode() {
+  const direct = controlMode === 'direct';
+  for (const select of document.querySelectorAll('[data-control-mode]')) select.value = controlMode;
+  for (const description of document.querySelectorAll('[data-control-description]')) {
+    description.textContent = direct
+      ? 'Move and face the direction you press or drag. Reverse direction immediately.'
+      : 'Up/down moves forward/back. Left/right turns in place. Works with arrows, WASD, and the joystick.';
+  }
+  document.querySelector('#movement-description').textContent = direct ? 'move and aim' : 'forward/back · turn';
+  document.querySelector('.controls-hint').textContent = direct
+    ? 'ARROWS / WASD move and aim · SHIFT slow · CLICK / SPACE tap near, hold far'
+    : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · CLICK / SPACE spray';
+  document.querySelector('.touch-instructions').textContent = direct
+    ? 'Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap near, hold far.'
+    : 'Drag up/down to move forward/back. Drag left/right to turn. Tap SPRAY near, hold far.';
+}
+
+for (const select of document.querySelectorAll('[data-control-mode]')) {
+  select.addEventListener('change', () => {
+    controlMode = select.value === 'tank' ? 'tank' : 'direct';
+    try { localStorage.setItem('golden-blast-controls', controlMode); } catch { /* Storage is optional. */ }
+    resetInput();
+    syncControlMode();
+  });
+}
+controlsButton.addEventListener('click', () => {
+  resetInput();
+  controlsDialog.showModal();
+});
+controlsDialog.addEventListener('close', resetInput);
+
 window.addEventListener('keydown', (event) => {
+  if (controlsDialog.open || (event.target instanceof Element && event.target.closest('select, input'))) return;
+  if (!playing && event.target instanceof Element && event.target.closest('button')) return;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
   keys.add(event.code);
   if (event.code === 'Space' && !event.repeat && playing) beginSpray();
@@ -540,7 +544,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('resize', resize);
 canvas.addEventListener('pointerdown', (event) => {
-  if (event.pointerType === 'mouse' && event.button === 0 && playing) { keys.add('Fire'); beginSpray(); }
+  if (event.pointerType === 'mouse' && event.button === 0 && playing && !controlsDialog.open) { keys.add('Fire'); beginSpray(); }
 });
 window.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') keys.delete('Fire'); });
 startButton.addEventListener('click', startGame);
@@ -552,6 +556,7 @@ document.querySelector('#sound').addEventListener('click', (event) => {
   if (soundEnabled) blip(520, 0.05);
 });
 
+syncControlMode();
 resize();
 loadModels();
 requestAnimationFrame(animate);
