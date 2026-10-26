@@ -83,9 +83,25 @@ export function createCity(scene) {
     if (activeBuilding) { activeBuilding.materials.push(mesh.material); activeBuilding.meshes.push(mesh); }
     return mesh;
   }
+  // Rooftop sign in a Verkkokauppa-style look: red panel, white V, wordmark.
+  function roofLogo(x, z, d, h) {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#e4002b'; g.fillRect(0, 0, 1024, 256);
+    g.fillStyle = '#ffffff'; g.textBaseline = 'middle';
+    g.font = 'bold 230px sans-serif'; g.textAlign = 'center'; g.fillText('V', 150, 136);
+    g.font = 'bold 76px sans-serif'; g.textAlign = 'left'; g.fillText('verkkokauppa.com', 290, 136);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const width = 3.6;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 256 / 1024), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
+    // Local to the building group: stands on the roof, set back from the front edge, facing the square.
+    mesh.position.set(0, h + 0.35 + width / 4 / 2, d / 2 - 0.35);
+    activeBuilding.group.add(mesh);
+    activeBuilding.materials.push(mesh.material); activeBuilding.meshes.push(mesh);
+  }
   const colors = ['#cd9a7f', '#d5c590', '#8fa9a4', '#ceb7a4', '#b38b84', '#a6b2be'];
   let buildingIndex = 0;
-  function building(x, z, w, d, h) {
+  function building(x, z, w, d, h, logo = false) {
     const group = new THREE.Group();
     group.position.set(x, 0, z);
     activeBuilding = {
@@ -119,12 +135,13 @@ export function createCity(scene) {
       part('box', '#385f5a', x, 1.3, front + 0.45, w * 0.75, 0.18, 0.9);
       sign(['CAFE', 'KIOSK', 'BAKERY'][Math.floor(buildingIndex / 3) % 3], x, 1.65, front + 0.12, w * 0.7);
     }
+    if (logo) roofLogo(x, z, d, h);
     buildings.push(activeBuilding);
     scene.add(group);
     activeBuilding = null;
   }
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    building(sx * 10.2, sz * 10, 4.5, 4.7, 3.5 + random() * 1.7);
+    building(sx * 10.2, sz * 10, 4.5, 4.7, 3.5 + random() * 1.7, sx > 0 && sz < 0);
     building(sx * 16, sz * 9.7, 4.7, 4.4, 3.2 + random() * 2.5);
     building(sx * 10, sz * 16.3, 4.8, 4.5, 4 + random() * 2);
     building(sx * 16, sz * 16.3, 4.4, 4.7, 3.5 + random() * 2.5);
