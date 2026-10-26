@@ -88,8 +88,9 @@ export function createCity(scene) {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
     const g = c.getContext('2d');
     g.fillStyle = '#e4002b'; g.fillRect(0, 0, 1024, 256);
-    g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.textAlign = 'center';
-    g.font = 'bold 130px sans-serif'; g.fillText('verkkopaukka', 512, 136);
+    g.fillStyle = '#ffffff'; g.textBaseline = 'middle';
+    g.font = 'bold 230px sans-serif'; g.textAlign = 'center'; g.fillText('V', 150, 136);
+    g.font = 'bold 100px sans-serif'; g.textAlign = 'left'; g.fillText('verkkopaukka', 290, 136);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const width = 3.6;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 256 / 1024), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
