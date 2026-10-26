@@ -16,12 +16,18 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
       player.turnSpeed = targetTurnSpeed + (player.turnSpeed - targetTurnSpeed) * decay;
     } else player.turnSpeed = 0;
   } else {
-    // Direction changes apply immediately to movement and the stream, including
-    // full reversals. There is no wait for the character to turn before moving.
+    // Travel responds immediately; facing and aim ease toward the requested
+    // direction independently, so smooth turns never hold movement back.
     if (x || z) {
-      player.heading = Math.atan2(x, z);
-      throttle = Math.min(1, Math.hypot(x, z));
+      const length = Math.hypot(x, z);
+      player.moveX = x / length;
+      player.moveZ = z / length;
+      player.targetHeading = Math.atan2(x, z);
+      throttle = Math.min(1, length);
     }
+    const target = player.targetHeading ?? player.heading;
+    const angle = Math.atan2(Math.sin(target - player.heading), Math.cos(target - player.heading));
+    player.heading = Math.abs(angle) < 0.0001 ? target : player.heading + angle * (1 - Math.exp(-16 * dt));
     player.turnSpeed = 0;
   }
 
@@ -37,7 +43,9 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
   player.moveSpeed = targetSpeed + (player.moveSpeed - targetSpeed) * decay;
   if (!throttle && Math.abs(player.moveSpeed) < 0.015) player.moveSpeed = 0;
   const oldX = player.x, oldZ = player.z;
-  city.move(player, player.dx * distance, player.dz * distance, player.radius);
+  const moveX = mode === 'tank' ? player.dx : player.moveX ?? player.dx;
+  const moveZ = mode === 'tank' ? player.dz : player.moveZ ?? player.dz;
+  city.move(player, moveX * distance, moveZ * distance, player.radius);
   const travelled = Math.hypot(player.x - oldX, player.z - oldZ);
   if (Math.abs(distance) > 0.0001 && travelled < Math.abs(distance) * 0.1) player.moveSpeed = 0;
   player.runTime += Math.sign(distance) * travelled * Math.PI * 2 / (height * 0.45);

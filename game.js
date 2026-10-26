@@ -85,6 +85,9 @@ const player = {
   dx: 0,
   dz: 1,
   heading: 0,
+  targetHeading: 0,
+  moveX: 0,
+  moveZ: 1,
   moveSpeed: 0,
   turnSpeed: 0,
   hp: 5,
@@ -413,6 +416,9 @@ function startGame() {
   player.dx = 0;
   player.dz = -1;
   player.heading = Math.PI;
+  player.targetHeading = player.heading;
+  player.moveX = 0;
+  player.moveZ = -1;
   player.moveSpeed = 0;
   player.turnSpeed = 0;
   player.runTime = 0;
@@ -496,40 +502,48 @@ function resetInput() {
   player.tapTimer = 0;
   player.moveSpeed = 0;
   player.turnSpeed = 0;
+  player.targetHeading = player.heading;
+  player.moveX = Math.sin(player.heading);
+  player.moveZ = Math.cos(player.heading);
 }
 
 function syncControlMode() {
   const direct = controlMode === 'direct';
-  for (const select of document.querySelectorAll('[data-control-mode]')) select.value = controlMode;
-  for (const description of document.querySelectorAll('[data-control-description]')) {
-    description.textContent = direct
-      ? 'Move and face the direction you press or drag. Reverse direction immediately.'
-      : 'Up/down moves forward/back. Left/right turns in place. Works with arrows, WASD, and the joystick.';
-  }
+  for (const radio of document.querySelectorAll('[data-control-mode]')) radio.checked = radio.value === controlMode;
   document.querySelector('#movement-description').textContent = direct ? 'move and aim' : 'forward/back · turn';
   document.querySelector('.controls-hint').textContent = direct
-    ? 'ARROWS / WASD move and aim · SHIFT slow · CLICK / SPACE tap near, hold far'
-    : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · CLICK / SPACE spray';
+    ? 'ARROWS / WASD move · SHIFT slow · CLICK / SPACE spray · ESC pause'
+    : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · SPACE spray · ESC pause';
   document.querySelector('.touch-instructions').textContent = direct
     ? 'Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap near, hold far.'
     : 'Drag up/down to move forward/back. Drag left/right to turn. Tap SPRAY near, hold far.';
 }
 
-for (const select of document.querySelectorAll('[data-control-mode]')) {
-  select.addEventListener('change', () => {
-    controlMode = select.value === 'tank' ? 'tank' : 'direct';
+for (const radio of document.querySelectorAll('[data-control-mode]')) {
+  radio.addEventListener('change', () => {
+    if (!radio.checked) return;
+    controlMode = radio.value === 'tank' ? 'tank' : 'direct';
     try { localStorage.setItem('golden-blast-controls', controlMode); } catch { /* Storage is optional. */ }
     resetInput();
     syncControlMode();
   });
 }
-controlsButton.addEventListener('click', () => {
+function pauseGame() {
   resetInput();
   controlsDialog.showModal();
-});
+}
+controlsButton.addEventListener('click', pauseGame);
 controlsDialog.addEventListener('close', resetInput);
 
 window.addEventListener('keydown', (event) => {
+  if (event.code === 'Escape' && playing) {
+    event.preventDefault();
+    if (!event.repeat) {
+      if (controlsDialog.open) controlsDialog.close();
+      else pauseGame();
+    }
+    return;
+  }
   if (controlsDialog.open || (event.target instanceof Element && event.target.closest('select, input'))) return;
   if (!playing && event.target instanceof Element && event.target.closest('button')) return;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();

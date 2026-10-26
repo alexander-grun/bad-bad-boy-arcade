@@ -10,11 +10,13 @@ function setup({ mode = 'direct', heading = 0, codes = [], touch = { x: 0, z: 0 
   return { player, city, input, step };
 }
 
-test('direct arrows move toward screen directions immediately, regardless of initial facing', () => {
+test('direct arrows move immediately while the character turns smoothly toward travel', () => {
   for (const [code, dx, dz] of [['ArrowUp', 0, -1], ['ArrowDown', 0, 1], ['ArrowLeft', -1, 0], ['ArrowRight', 1, 0]]) {
     const { player, step } = setup({ heading: Math.atan2(-dx, -dz), codes: [code] });
     step();
     assert.ok(player.x * dx + player.z * dz > 0);
+    assert.ok(Math.hypot(player.dx - dx, player.dz - dz) > .1, 'Facing does not snap to the requested direction');
+    step(60);
     assert.ok(Math.abs(player.dx - dx) < 1e-10);
     assert.ok(Math.abs(player.dz - dz) < 1e-10);
   }
@@ -27,8 +29,38 @@ test('direct movement reverses on the first frame, including while firing', () =
   input.keys = new Set(['KeyS']);
   step();
   assert.ok(player.z > before);
-  assert.equal(player.dz, 1);
+  assert.ok(player.dz < .99, 'Movement reverses before the smooth turn finishes');
+  assert.equal(player.dx, Math.sin(player.heading));
+  assert.equal(player.dz, Math.cos(player.heading));
   assert.equal(player.root.rotation.y, player.heading);
+  step(60);
+  assert.equal(player.dz, 1);
+});
+
+test('direct facing takes the short path across the angle boundary', () => {
+  const heading = Math.PI - .02;
+  const { player, step } = setup({ heading, touch: { x: Math.sin(-Math.PI + .02), z: Math.cos(-Math.PI + .02) } });
+  step();
+  const change = Math.atan2(Math.sin(player.heading - heading), Math.cos(player.heading - heading));
+  assert.ok(change > 0 && change < .04);
+  step(60);
+  assert.ok(Math.abs(player.heading - (-Math.PI + .02)) < .0001);
+});
+
+test('direct turn smoothing is independent of frame rate and settles after release', () => {
+  const headings = [];
+  for (const fps of [30, 60, 120]) {
+    const { player, input, step } = setup({ codes: ['KeyD'] });
+    input.dt = 1 / fps;
+    step(fps / 5);
+    headings.push(player.heading);
+    const before = player.heading;
+    input.keys.clear();
+    step(fps / 2);
+    assert.ok(player.heading > before);
+    assert.ok(Math.abs(player.heading - Math.PI / 2) < .0001);
+  }
+  assert.ok(Math.max(...headings) - Math.min(...headings) < 1e-10);
 });
 
 test('direct diagonal movement has the same speed as cardinal movement and aliases do not stack', () => {
