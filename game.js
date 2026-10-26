@@ -223,7 +223,7 @@ async function loadHero() {
 
 async function loadModels() {
   try {
-    status.textContent = 'Loading the hero, slimes, and Spanish slugs…';
+    status.textContent = 'Loading the hero, snails, and Spanish slugs…';
     const [gltf] = await Promise.all([
       loadHero(),
       loadEnemyModels(),
@@ -259,7 +259,7 @@ function spawnWave(level) {
   const count = Math.min(3 + level * 2, 18);
   for (let i = 0; i < count; i++) {
     const point = city.spawnPoint(player, i, count);
-    makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'slug' : 'slime');
+    makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'slug' : 'snail');
   }
   if (level > 1) showToast(`WAVE ${level}`);
 }
@@ -269,7 +269,7 @@ function removeEnemy(enemy, pop = false) {
   enemy.alive = false;
   disposeEnemy(enemy);
   if (pop) {
-    score += enemy.kind === 'slug' ? 150 : 100;
+    score += 150;
     if (enemy.kind === 'slug' && Math.random() < BATTERY_DROP_CHANCE) dropBattery(enemy.x, enemy.z);
     scoreLabel.textContent = String(score).padStart(4, '0');
     burst(enemy.x, enemy.hitHeight, enemy.z, 0xffd34e, 10);
@@ -397,7 +397,7 @@ function update(dt) {
     enemy.root.rotation.y = Math.atan2(vx, vz);
     if (!attacking) {
       const direction = city.chase(enemy.x, enemy.z, player.x, player.z);
-      // Soft separation keeps a pack of slugs from collapsing into one blob.
+      // Soft separation keeps a pack from collapsing into one blob.
       for (const other of enemies) {
         if (other === enemy || !other.alive) continue;
         const sx = enemy.x - other.x, sz = enemy.z - other.z;
@@ -417,7 +417,7 @@ function update(dt) {
     } else if (enemy.attack <= 0 && player.invulnerable <= 0) {
       player.hp--;
       player.invulnerable = 0.85;
-      enemy.attack = enemy.kind === 'slug' ? 1.2 : 0.85;
+      enemy.attack = 1.2;
       updateHealth();
       showBite(enemy);
       blip(115, 0.12);
