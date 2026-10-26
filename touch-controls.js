@@ -44,7 +44,10 @@ export function createTouchControls({ zone, stick, thumb, fireButton, onFireStar
       dy *= radius / distance;
     }
     const length = Math.min(distance, radius);
-    const strength = Math.max(0, (length / radius - deadzone) / (1 - deadzone));
+    const deflection = Math.max(0, (length / radius - deadzone) / (1 - deadzone));
+    // Give the centre more room for fine positioning, with full speed still
+    // available at the edge. Direction stays continuous at every angle.
+    const strength = deflection * (0.35 + 0.65 * deflection);
     input.x = length ? dx / length * strength : 0;
     input.z = length ? dy / length * strength : 0;
     const bounds = zone.getBoundingClientRect();

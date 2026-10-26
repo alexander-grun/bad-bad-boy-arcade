@@ -47,8 +47,22 @@ test('joystick starts under the finger, ignores jitter, and supports analog spee
   pointer(zone, 'pointermove', 1, 103, 200);
   assert.equal(controls.input.x, 0);
   pointer(zone, 'pointermove', 1, 122, 200);
-  assert.ok(controls.input.x > 0.4 && controls.input.x < 0.5);
+  assert.ok(controls.input.x > 0.2 && controls.input.x < 0.3);
   assert.equal(controls.input.z, 0);
+});
+
+test('joystick response gives more room for fine movement and still reaches full speed', () => {
+  const { zone, controls } = setup();
+  pointer(zone, 'pointerdown');
+  let previous = 0;
+  for (const distance of [6, 10, 16, 22, 30, 38, 44]) {
+    pointer(zone, 'pointermove', 1, 100 + distance, 200);
+    assert.ok(controls.input.x > previous);
+    previous = controls.input.x;
+    assert.equal(controls.input.z, 0);
+    if (distance <= 16) assert.ok(controls.input.x < .15);
+  }
+  assert.equal(controls.input.x, 1);
 });
 
 test('long drags slide the base, cap diagonal speed, and allow immediate reversal', () => {

@@ -27,7 +27,10 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
     }
     const target = player.targetHeading ?? player.heading;
     const angle = Math.atan2(Math.sin(target - player.heading), Math.cos(target - player.heading));
-    player.heading = Math.abs(angle) < 0.0001 ? target : player.heading + angle * (1 - Math.exp(-16 * dt));
+    // Small corrections reach their exact angle in one frame. Larger turns
+    // stay smooth and finish in finite time instead of trailing the input.
+    const turnStep = 14 * dt;
+    player.heading = Math.abs(angle) <= turnStep ? target : player.heading + Math.sign(angle) * turnStep;
     player.turnSpeed = 0;
   }
 
@@ -37,7 +40,7 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
   player.root.rotation.y = player.heading;
 
   const targetSpeed = throttle * maxSpeed;
-  const damping = throttle ? 14 : 24;
+  const damping = throttle ? 14 : mode === 'direct' ? 48 : 24;
   const decay = Math.exp(-damping * dt);
   const distance = targetSpeed * dt + (player.moveSpeed - targetSpeed) * (1 - decay) / damping;
   player.moveSpeed = targetSpeed + (player.moveSpeed - targetSpeed) * decay;

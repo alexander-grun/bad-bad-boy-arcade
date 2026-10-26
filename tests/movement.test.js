@@ -42,25 +42,47 @@ test('direct facing takes the short path across the angle boundary', () => {
   const { player, step } = setup({ heading, touch: { x: Math.sin(-Math.PI + .02), z: Math.cos(-Math.PI + .02) } });
   step();
   const change = Math.atan2(Math.sin(player.heading - heading), Math.cos(player.heading - heading));
-  assert.ok(change > 0 && change < .04);
-  step(60);
+  assert.ok(change > 0 && change <= .04 + 1e-10);
   assert.ok(Math.abs(player.heading - (-Math.PI + .02)) < .0001);
 });
 
-test('direct turn smoothing is independent of frame rate and settles after release', () => {
+test('direct turns finish at the same angle across frame rates, without aim drift', () => {
   const headings = [];
   for (const fps of [30, 60, 120]) {
     const { player, input, step } = setup({ codes: ['KeyD'] });
     input.dt = 1 / fps;
-    step(fps / 5);
+    step(fps / 30);
     headings.push(player.heading);
-    const before = player.heading;
     input.keys.clear();
     step(fps / 2);
-    assert.ok(player.heading > before);
-    assert.ok(Math.abs(player.heading - Math.PI / 2) < .0001);
+    assert.equal(player.heading, Math.PI / 2);
+    step(fps);
+    assert.equal(player.heading, Math.PI / 2);
   }
   assert.ok(Math.max(...headings) - Math.min(...headings) < 1e-10);
+});
+
+test('small joystick aim corrections reach the exact angle in one frame while firing', () => {
+  for (const fps of [30, 60, 120]) {
+    const angle = .05;
+    const { player, input, step } = setup({ touch: { x: Math.sin(angle) * .25, z: Math.cos(angle) * .25 }, firing: true });
+    input.dt = 1 / fps;
+    step();
+    assert.ok(Math.abs(player.heading - angle) < 1e-10);
+    assert.equal(player.dx, Math.sin(player.heading));
+    assert.equal(player.dz, Math.cos(player.heading));
+  }
+});
+
+test('releasing Direct movement stops within eight centimetres at full speed', () => {
+  const { player, input, step } = setup({ codes: ['KeyW'] });
+  step(120);
+  const before = player.z;
+  input.keys.clear();
+  step(60);
+  assert.equal(player.moveSpeed, 0);
+  const coast = Math.abs(player.z - before);
+  assert.ok(coast > 0 && coast < .08);
 });
 
 test('direct diagonal movement has the same speed as cardinal movement and aliases do not stack', () => {
