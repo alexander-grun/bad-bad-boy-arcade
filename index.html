@@ -11,7 +11,7 @@
         "imports": {
           "three": "./vendor/three-0.180.0/build/three.module.min.js",
           "three/addons/": "./vendor/three-0.180.0/examples/jsm/",
-          "game": "./game.js?v=20261026-assist1",
+          "game": "./game.js?v=20261026-directions1",
           "./movement.js": "./movement.js?v=20261026-assist1",
           "./aim-assist.js": "./aim-assist.js?v=20261026-assist1",
           "./touch-controls.js": "./touch-controls.js?v=20261026-precision1",
@@ -46,14 +46,14 @@
           <fieldset class="control-setting">
             <legend>MOVEMENT</legend>
             <div class="control-options">
-              <label class="control-option"><input type="radio" name="start-movement" value="direct" data-control-mode checked /><span class="control-choice"><strong>Direct</strong><span>Move freely.<br />Turn smoothly.</span></span></label>
-              <label class="control-option"><input type="radio" name="start-movement" value="tank" data-control-mode /><span class="control-choice"><strong>Tank</strong><span>Forward & back.<br />Steer to aim.</span></span></label>
+              <label class="control-option"><input type="radio" name="start-movement" value="direct" data-control-mode checked /><span class="control-choice"><strong>Direct</strong><span>Screen directions.<br />↑ up · ↓ down<br />← left · → right</span></span></label>
+              <label class="control-option"><input type="radio" name="start-movement" value="tank" data-control-mode /><span class="control-choice"><strong>Tank</strong><span>Character directions.<br />↑ forward · ↓ back<br />← → turn</span></span></label>
             </div>
           </fieldset>
           <label class="assist-setting"><input type="checkbox" data-aim-assist checked /><span class="assist-switch" aria-hidden="true"></span><span class="assist-copy"><strong>Aim assist</strong><span>Tracks enemies ahead while firing · Direct only</span></span></label>
-          <div class="keys"><kbd>ARROWS / WASD</kbd><span id="movement-description">move and aim</span><kbd>SHIFT</kbd><span>fine aim</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
+          <div class="keys"><kbd>ARROWS / WASD</kbd><span id="movement-description">move in screen directions</span><kbd>SHIFT</kbd><span>fine aim</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
           <p class="keyboard-aim-hint" data-keyboard-aim-hint>Hold Shift + ← / → to fine-aim at any angle.</p>
-          <p class="touch-instructions">Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap for nearby enemies; hold to reach farther.</p>
+          <p class="touch-instructions">Drag on the left in the direction you want to move on screen. The character turns to face that direction. Tap SPRAY near, hold far.</p>
           <div id="load-status" class="load-status" role="status">Loading models…</div>
           <button id="start" class="primary-button" type="button" disabled>LOADING…</button>
           <button id="retry-load" class="primary-button" type="button" hidden>RETRY LOADING</button>
@@ -79,8 +79,8 @@
         <fieldset class="control-setting">
           <legend>MOVEMENT</legend>
           <div class="control-options">
-            <label class="control-option"><input type="radio" name="game-movement" value="direct" data-control-mode checked /><span class="control-choice"><strong>Direct</strong><span>Move freely.<br />Turn smoothly.</span></span></label>
-            <label class="control-option"><input type="radio" name="game-movement" value="tank" data-control-mode /><span class="control-choice"><strong>Tank</strong><span>Forward & back.<br />Steer to aim.</span></span></label>
+            <label class="control-option"><input type="radio" name="game-movement" value="direct" data-control-mode checked /><span class="control-choice"><strong>Direct</strong><span>Screen directions.<br />↑ up · ↓ down<br />← left · → right</span></span></label>
+            <label class="control-option"><input type="radio" name="game-movement" value="tank" data-control-mode /><span class="control-choice"><strong>Tank</strong><span>Character directions.<br />↑ forward · ↓ back<br />← → turn</span></span></label>
           </div>
         </fieldset>
         <label class="assist-setting"><input type="checkbox" data-aim-assist checked /><span class="assist-switch" aria-hidden="true"></span><span class="assist-copy"><strong>Aim assist</strong><span>Tracks enemies ahead while firing · Direct only</span></span></label>

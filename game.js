@@ -549,9 +549,9 @@ function syncControlMode() {
     checkbox.checked = aimAssistEnabled;
     checkbox.disabled = !direct;
   }
-  document.querySelector('#movement-description').textContent = direct ? 'move and aim' : 'forward/back · turn';
+  document.querySelector('#movement-description').textContent = direct ? 'move in screen directions' : 'forward/back · turn the character';
   document.querySelector('.controls-hint').textContent = direct
-    ? 'ARROWS / WASD move · SHIFT + ← → fine aim · CLICK / SPACE spray · ESC pause'
+    ? 'ARROWS / WASD move in screen directions · SHIFT + ← → fine aim · CLICK / SPACE spray · ESC pause'
     : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · SPACE spray · ESC pause';
   for (const hint of document.querySelectorAll('[data-keyboard-aim-hint]')) {
     hint.textContent = direct
@@ -559,8 +559,8 @@ function syncControlMode() {
       : 'Hold Shift for slower movement and precise steering. Release left/right to hold your aim.';
   }
   document.querySelector('.touch-instructions').textContent = direct
-    ? 'Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap near, hold far.'
-    : 'Drag up/down to move forward/back. Drag left/right to turn. Tap SPRAY near, hold far.';
+    ? 'Drag on the left in the direction you want to move on screen. The character turns to face that direction. Tap SPRAY near, hold far.'
+    : 'Drag up to walk where the character is facing; down to walk backward. Drag left/right to turn the character. Tap SPRAY near, hold far.';
 }
 
 for (const checkbox of document.querySelectorAll('[data-aim-assist]')) {
