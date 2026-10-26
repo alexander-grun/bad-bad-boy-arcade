@@ -555,8 +555,8 @@ function syncControlMode() {
     : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · SPACE spray · ESC pause';
   for (const hint of document.querySelectorAll('[data-keyboard-aim-hint]')) {
     hint.textContent = direct
-      ? 'Hold Shift + ← / → (or A / D) for manual fine aim. Shift + ↑ / ↓ moves slowly along your aim. Shift overrides aim assist.'
-      : 'Hold Shift for slower movement and precise steering. Release left/right to hold your aim.';
+      ? 'Hold Shift + ← / → (or A / D) to turn quickly and smoothly. Shift + ↑ / ↓ moves slowly along your aim. Shift overrides aim assist.'
+      : 'Hold Shift for slower movement and quick, smooth turning, even while firing. Release left/right to hold your aim.';
   }
   document.querySelector('.touch-instructions').textContent = direct
     ? 'Drag on the left in the direction you want to move on screen. The character turns to face that direction. Tap SPRAY near, hold far.'

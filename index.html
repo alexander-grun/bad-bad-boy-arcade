@@ -11,8 +11,8 @@
         "imports": {
           "three": "./vendor/three-0.180.0/build/three.module.min.js",
           "three/addons/": "./vendor/three-0.180.0/examples/jsm/",
-          "game": "./game.js?v=20261026-directions1",
-          "./movement.js": "./movement.js?v=20261026-assist1",
+          "game": "./game.js?v=20261026-fast-turn1",
+          "./movement.js": "./movement.js?v=20261026-fast-turn1",
           "./aim-assist.js": "./aim-assist.js?v=20261026-assist1",
           "./touch-controls.js": "./touch-controls.js?v=20261026-precision1",
           "./hero.js": "./hero.js?v=20261025-medkits1",
@@ -52,7 +52,7 @@
           </fieldset>
           <label class="assist-setting"><input type="checkbox" data-aim-assist checked /><span class="assist-switch" aria-hidden="true"></span><span class="assist-copy"><strong>Aim assist</strong><span>Tracks enemies ahead while firing · Direct only</span></span></label>
           <div class="keys"><kbd>ARROWS / WASD</kbd><span id="movement-description">move in screen directions</span><kbd>SHIFT</kbd><span>fine aim</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
-          <p class="keyboard-aim-hint" data-keyboard-aim-hint>Hold Shift + ← / → to fine-aim at any angle.</p>
+          <p class="keyboard-aim-hint" data-keyboard-aim-hint>Hold Shift + ← / → to turn quickly and smoothly.</p>
           <p class="touch-instructions">Drag on the left in the direction you want to move on screen. The character turns to face that direction. Tap SPRAY near, hold far.</p>
           <div id="load-status" class="load-status" role="status">Loading models…</div>
           <button id="start" class="primary-button" type="button" disabled>LOADING…</button>
@@ -84,7 +84,7 @@
           </div>
         </fieldset>
         <label class="assist-setting"><input type="checkbox" data-aim-assist checked /><span class="assist-switch" aria-hidden="true"></span><span class="assist-copy"><strong>Aim assist</strong><span>Tracks enemies ahead while firing · Direct only</span></span></label>
-        <p class="keyboard-aim-hint" data-keyboard-aim-hint>Hold Shift + ← / → to fine-aim at any angle.</p>
+        <p class="keyboard-aim-hint" data-keyboard-aim-hint>Hold Shift + ← / → to turn quickly and smoothly.</p>
         <form method="dialog"><button class="primary-button" type="submit">RESUME GAME</button></form>
         <small>Esc to pause or resume</small>
       </dialog>

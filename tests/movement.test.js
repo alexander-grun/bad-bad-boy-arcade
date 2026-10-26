@@ -104,7 +104,7 @@ test('Shift gives Direct keyboard controls precise rotation at arbitrary angles 
   for (const [code, direction] of [['ArrowRight', -1], ['KeyD', -1], ['ArrowLeft', 1], ['KeyA', 1]]) {
     const { player, step } = setup({ codes: ['ShiftLeft', code], firing: true });
     step(30);
-    assert.ok(Math.abs(player.heading - direction * .325) < 1e-10);
+    assert.ok(player.heading * direction > 1.3 && player.heading * direction < Math.PI / 2, 'A half-second turn approaches 90 degrees, including while firing');
     assert.equal(player.x, 0);
     assert.equal(player.z, 0);
     assert.equal(player.dx, Math.sin(player.heading));
@@ -151,16 +151,41 @@ test('Shift up/down repositions slowly along the chosen aim without changing it'
 });
 
 test('releasing Shift restores normal directional movement and fine aim is frame-rate independent', () => {
+  const headings = [];
   for (const fps of [30, 60, 120]) {
     const { player, input, step } = setup({ codes: ['ShiftLeft', 'ArrowRight'] });
     input.dt = 1 / fps;
     step(fps);
-    assert.ok(Math.abs(player.heading + .65) < 1e-10);
+    headings.push(player.heading);
+    assert.ok(Math.abs(player.heading) > 3, 'A half-turn takes about one second');
     input.keys.delete('ShiftLeft');
     step();
     assert.ok(player.x > 0);
     assert.equal(player.moveX, 1);
     assert.equal(player.moveZ, 0);
+  }
+  assert.ok(Math.max(...headings) - Math.min(...headings) < 1e-10);
+});
+
+test('Shift turning accelerates smoothly, reverses promptly and stops without drift in both modes', () => {
+  for (const mode of ['direct', 'tank']) {
+    const { player, input, step } = setup({ mode, codes: ['ShiftLeft', 'ArrowRight'], firing: true });
+    step();
+    const firstTurn = -player.heading;
+    assert.ok(firstTurn > 0 && firstTurn < Math.PI / 180, 'The first frame eases into the turn');
+    step();
+    assert.ok(-player.heading - firstTurn > firstTurn, 'Turning accelerates instead of snapping to full speed');
+    step(28);
+    assert.ok(player.heading < -1.3, 'The smooth turn still responds quickly');
+    const beforeReverse = player.heading;
+    input.keys = new Set(['ShiftLeft', 'ArrowLeft']);
+    step();
+    assert.ok(player.heading > beforeReverse, 'Reversing the key turns in the new direction immediately');
+    const beforeRelease = player.heading;
+    input.keys = new Set(['ShiftLeft']);
+    step(30);
+    assert.equal(player.heading, beforeRelease);
+    assert.equal(player.turnSpeed, 0);
   }
 });
 

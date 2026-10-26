@@ -1,4 +1,16 @@
-const FINE_AIM_TURN_RATE = .65;
+const MANUAL_AIM_TURN_RATE = 3.2;
+
+function turnPlayer(player, targetSpeed, dt) {
+  if (!targetSpeed) {
+    player.turnSpeed = 0;
+    return;
+  }
+  // Respond to a direction change immediately, then ease into the new turn.
+  if (player.turnSpeed * targetSpeed < 0) player.turnSpeed = 0;
+  const decay = Math.exp(-18 * dt);
+  player.heading += targetSpeed * dt + (player.turnSpeed - targetSpeed) * (1 - decay) / 18;
+  player.turnSpeed = targetSpeed + (player.turnSpeed - targetSpeed) * decay;
+}
 
 export function movePlayer(player, city, { keys, touch, mode, dt, firing, height, resolveAim = null }) {
   const touchStrength = Math.hypot(touch.x, touch.z);
@@ -11,22 +23,16 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
   if (mode === 'direct' && precise && !touchStrength) {
     // Shift temporarily gives keyboard players continuous aim between the
     // eight movement directions. Releasing it keeps the chosen angle.
-    player.heading -= x * FINE_AIM_TURN_RATE * dt;
+    turnPlayer(player, -x * MANUAL_AIM_TURN_RATE, dt);
     player.targetHeading = player.heading;
     player.moveX = Math.sin(player.heading);
     player.moveZ = Math.cos(player.heading);
-    player.turnSpeed = 0;
     throttle = -z;
     if (!throttle) player.moveSpeed = 0;
   } else if (mode === 'tank') {
     throttle = -z;
-    const turnRate = precise ? FINE_AIM_TURN_RATE : firing ? 1.7 : 3.2;
-    const targetTurnSpeed = -x * turnRate;
-    if (targetTurnSpeed) {
-      const decay = Math.exp(-18 * dt);
-      player.heading += targetTurnSpeed * dt + (player.turnSpeed - targetTurnSpeed) * (1 - decay) / 18;
-      player.turnSpeed = targetTurnSpeed + (player.turnSpeed - targetTurnSpeed) * decay;
-    } else player.turnSpeed = 0;
+    const turnRate = precise ? MANUAL_AIM_TURN_RATE : firing ? 1.7 : 3.2;
+    turnPlayer(player, -x * turnRate, dt);
   } else {
     // Travel responds immediately; facing and aim ease toward the requested
     // direction independently, so smooth turns never hold movement back.
