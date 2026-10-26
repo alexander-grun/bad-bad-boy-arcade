@@ -83,19 +83,19 @@ export function createCity(scene) {
     if (activeBuilding) { activeBuilding.materials.push(mesh.material); activeBuilding.meshes.push(mesh); }
     return mesh;
   }
-  // Rooftop sign in a Verkkokauppa-style look: red panel, white V, wordmark.
+  // Rooftop sign for the corner shop: red panel, tilted so it does not copy a real logo.
   function roofLogo(x, z, d, h) {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
     const g = c.getContext('2d');
     g.fillStyle = '#e4002b'; g.fillRect(0, 0, 1024, 256);
-    g.fillStyle = '#ffffff'; g.textBaseline = 'middle';
-    g.font = 'bold 230px sans-serif'; g.textAlign = 'center'; g.fillText('V', 150, 136);
-    g.font = 'bold 76px sans-serif'; g.textAlign = 'left'; g.fillText('verkkokauppa.com', 290, 136);
+    g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.textAlign = 'center';
+    g.font = 'bold 130px sans-serif'; g.fillText('verkkopaukka', 512, 136);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const width = 3.6;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 256 / 1024), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
     // Local to the building group: stands on the roof, set back from the front edge, facing the square.
     mesh.position.set(0, h + 0.35 + width / 4 / 2, d / 2 - 0.35);
+    mesh.rotation.z = 0.12;
     activeBuilding.group.add(mesh);
     activeBuilding.materials.push(mesh.material); activeBuilding.meshes.push(mesh);
   }
