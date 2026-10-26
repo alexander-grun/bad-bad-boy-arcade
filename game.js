@@ -32,7 +32,8 @@ const endScreen = document.querySelector('#end-screen');
 const startButton = document.querySelector('#start');
 const restartButton = document.querySelector('#restart');
 const healthFill = document.querySelector('#health-fill');
-const heroHp = document.querySelector('#hero-hp');
+const heroHud = document.querySelector('#hero-hud');
+const heroPower = document.querySelector('#hero-power');
 const heroHpFill = document.querySelector('#hero-hp-fill');
 const heroHeadPosition = new THREE.Vector3();
 const scoreLabel = document.querySelector('#score');
@@ -476,15 +477,19 @@ function updateHealth() {
 
 // Keeps the hero's HP bar above his head on screen. Hidden when he is off screen.
 function updateHeroHp() {
+  const powered = player.powerTimer > 0;
+  const label = powered ? `BATTERY ${Math.ceil(player.powerTimer)}s` : '';
+  if (heroPower.textContent !== label) heroPower.textContent = label;
+  heroPower.hidden = !powered;
   heroHeadPosition.set(player.x, HERO_HEIGHT + 0.5, player.z).project(camera);
   const onScreen = playing && heroHeadPosition.z < 1;
-  heroHp.hidden = !onScreen;
+  heroHud.hidden = !onScreen;
   if (!onScreen) return;
-  const shell = heroHp.offsetParent.getBoundingClientRect();
+  const shell = heroHud.offsetParent.getBoundingClientRect();
   const rect = canvas.getBoundingClientRect();
   const x = rect.left - shell.left + (heroHeadPosition.x * 0.5 + 0.5) * rect.width;
   const y = rect.top - shell.top + (-heroHeadPosition.y * 0.5 + 0.5) * rect.height;
-  heroHp.style.transform = `translate(${x - 32}px, ${y}px)`;
+  heroHud.style.transform = `translate(${x - 32}px, ${y}px)`;
 }
 
 function dropBattery(x, z) {
@@ -501,7 +506,7 @@ function updateBatteries(dt) {
     if (Math.hypot(player.x - battery.x, player.z - battery.z) > player.radius + 0.4) continue;
     scene.remove(battery.mesh);
     batteries.splice(i, 1);
-    player.powerTimer = POWER_TIME;
+    player.powerTimer += POWER_TIME;
     showToast('BATTERY POWER!');
     blip(880, .15);
   }
