@@ -20,7 +20,7 @@ Open [http://localhost:8000/](http://localhost:8000/). No build step or package 
 
 Controls: `Up` / `Down` move forward / backward, and `Left` / `Right` smoothly turn the character in place or while moving. A short turn can leave the character facing any angle; releasing the turn key stops rotation immediately. Hold `Shift` for fine aiming with slower turning and movement. Spraying also reduces turning and movement speed for easier tracking. Movement accelerates and brakes smoothly, with animation paced to actual travel. The camera pans with a fixed viewing angle to keep aiming steady.
 
-`WASD` also supports movement toward world directions with smooth turning. Tap the left mouse button or `Space` for nearby enemies, or hold to spray farther. The stream follows the character's actual facing direction from beneath his joined hands, including while reversing. Touch controls provide the same forward, backward, and steering controls as the arrow keys. Hit the approaching enemies to clear waves and earn points.
+`WASD` also supports movement toward world directions with smooth turning. Tap the left mouse button or `Space` for nearby enemies, or hold to spray farther. The stream follows the character's actual facing direction from beneath his joined hands, including while reversing. On touchscreens, drag anywhere in the left control area to move and face that direction; a small deflection walks slowly and a full deflection runs. The floating joystick appears under your thumb and its base follows long drags. Release to stop. Use a second finger on SPRAY to fire while moving. Touch controls support portrait and landscape layouts and reset when the app loses focus. Hit the approaching enemies to clear waves and earn points.
 
 The character's axes are aligned, and his legs use a skeleton with hip, knee, and ankle joints.
 The character reaches the third-floor windows of the map's buildings. His height is three storeys at 1.15 game units each (3.45 total), using the same storey spacing as the facades. The emitter, collision radius, and liquid thickness match this size. The camera frames his full height, and the running animation follows the distance travelled with a stride proportional to his height.
@@ -55,6 +55,7 @@ Five medkits are scattered across the square and the four main streets each roun
 - `server.py`: local server with fresh application modules.
 - `vendor/`: pinned Three.js modules and local fonts with their licences.
 - `game.js`: movement, waves, damage, and input.
+- `touch-controls.js`: floating analog joystick and independent multitouch spray control.
 - `city.js`: environment, collisions, and navigation.
 - `liquid.js`: ballistic liquid simulation, fluid surface, droplets, splashes, and hit detection.
 - `enemies.js`: loading and animating the slime and snail models.

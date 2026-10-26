@@ -44,8 +44,8 @@ button { font: inherit; }
 [hidden] { display: none !important; }
 #retry-load { margin-top: 10px; }
 
-.game-shell { position: relative; width: 100%; height: 100%; min-height: 420px; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #29263a, #11131b 70%); }
-#game { display: block; width: 100%; height: 100%; outline: 0; }
+.game-shell { position: relative; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #29263a, #11131b 70%); }
+#game { display: block; width: 100%; height: 100%; outline: 0; touch-action: none; }
 
 .hud { position: absolute; z-index: 2; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: clamp(12px, 2.4vw, 32px); padding: 20px clamp(16px, 4vw, 54px); pointer-events: none; background: linear-gradient(180deg, rgba(10, 11, 17, .68), transparent); }
 .brand { margin-right: auto; color: var(--ink); font: 800 clamp(17px, 2vw, 24px)/1 "Barlow Condensed", sans-serif; letter-spacing: .13em; white-space: nowrap; }
@@ -59,7 +59,7 @@ button { font: inherit; }
 
 .load-status { margin-bottom: 12px; color: var(--gold); font-size: 12px; line-height: 1.6; }
 .load-status.hidden { display: none; }
-.overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 24px; background: linear-gradient(90deg, #11131bcc, #11131b44 75%); transition: opacity .25s; }
+.overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: safe center; padding: 24px; overflow-y: auto; background: linear-gradient(90deg, #11131bcc, #11131b44 75%); transition: opacity .25s; }
 .overlay.hidden { display: none; }
 .card { width: min(430px, 100%); margin-right: auto; margin-left: clamp(0px, 8vw, 120px); padding: clamp(24px, 4vw, 42px); border: 1px solid #ffffff20; border-radius: 20px; background: linear-gradient(145deg, rgba(32,31,45,.94), rgba(18,19,29,.94)); box-shadow: 0 24px 90px #0008; backdrop-filter: blur(14px); }
 .eyebrow { color: var(--gold); font: 700 11px/1 "Barlow Condensed", sans-serif; letter-spacing: .2em; }
@@ -85,6 +85,7 @@ kbd { padding: 6px 8px; border: 1px solid #ffffff30; border-bottom-width: 2px; b
 .toast { position: absolute; z-index: 3; top: 82px; left: 50%; transform: translate(-50%, -10px); padding: 9px 15px; border: 1px solid #ffffff20; border-radius: 999px; color: var(--gold); background: #181925df; font: 700 12px/1 "Barlow Condensed", sans-serif; letter-spacing: .12em; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
 .toast.visible { transform: translate(-50%, 0); opacity: 1; }
 .mobile-controls { display: none; }
+.card .touch-instructions { display: none; }
 .range-hud { position: absolute; z-index: 2; top: 78px; left: clamp(16px, 4vw, 54px); width: 170px; padding: 10px 12px; border: 1px solid #ffffff20; border-radius: 10px; background: #182029c9; color: #bfc6c9; pointer-events: none; font-size: 9px; font-weight: 700; letter-spacing: .09em; }
 .range-hud > div:first-child { display: flex; justify-content: space-between; gap: 8px; }
 .range-hud strong { color: var(--gold); }
@@ -93,23 +94,30 @@ kbd { padding: 6px 8px; border: 1px solid #ffffff30; border-bottom-width: 2px; b
 .range-hud small { display: block; margin-top: 7px; font-size: 9px; font-weight: 500; letter-spacing: 0; color: #c0c4c5; }
 
 @media (max-width: 680px) {
-  .hud { gap: 12px; padding: 14px 14px; }
-  .brand { letter-spacing: .08em; }
+  .hud { gap: 8px; padding: max(14px, env(safe-area-inset-top)) 14px 14px; }
+  .brand { font-size: clamp(13px, 3.8vw, 17px); letter-spacing: .04em; }
   .stat { min-width: 35px; }
   .stat strong { font-size: 18px; }
-  .health { width: 60px; }
+  .health { width: 48px; flex-shrink: 0; }
   .icon-button { display: none; }
   .range-hud { top: 66px; left: 14px; width: 148px; }
   .card { margin: 0; padding: 27px; }
   h1 { font-size: 60px; }
   .controls-hint { display: none; }
-  .mobile-controls { position: absolute; z-index: 3; right: 18px; bottom: 20px; left: 18px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; }
-  .pad, .fire-button { pointer-events: auto; touch-action: none; }
-  .pad { display: grid; justify-items: center; gap: 5px; }
-  .pad div { display: flex; gap: 5px; }
-  .pad button, .fire-button { width: 46px; height: 46px; border: 1px solid #ffffff30; border-radius: 14px; color: white; background: #171824c9; box-shadow: 0 6px 20px #0006; font-weight: 800; }
-  .pad button:active, .fire-button:active { background: #ffffff3b; }
-  .fire-button { width: 72px; height: 72px; border-color: #ffe37a77; border-radius: 50%; color: #2b2518; background: linear-gradient(145deg, #ffe37a, #ffbf37); font-size: 12px; }
+}
+
+@media (any-pointer: coarse), (max-width: 680px) {
+  .controls-hint, .card .keys { display: none; }
+  .card .touch-instructions { display: block; margin: 0 0 20px; color: var(--gold); font-size: 12px; }
+  .mobile-controls.enabled { --control-bottom: max(32px, calc(env(safe-area-inset-bottom) + 20px)); position: absolute; z-index: 3; inset: 0; display: block; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .joystick-zone { position: absolute; top: max(120px, env(safe-area-inset-top)); bottom: 0; left: 0; width: 62%; pointer-events: auto; touch-action: none; }
+  .touch-control { display: grid; place-items: center; width: 88px; height: 88px; padding: 0; border: 1px solid #ffe37aaa; border-radius: 50%; color: #2b2518; background: linear-gradient(145deg, #ffe37a, #ffbf37); box-shadow: 0 6px 20px #0006; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+  .joystick-hint { position: absolute; left: max(24px, calc(env(safe-area-inset-left) + 16px)); bottom: var(--control-bottom); pointer-events: none; }
+  .engaged .joystick-hint { visibility: hidden; }
+  .joystick { position: absolute; width: 112px; height: 112px; margin: -56px; border: 1px solid #ffe37a88; border-radius: 50%; background: #17182480; box-shadow: inset 0 0 24px #0003, 0 6px 24px #0004; pointer-events: none; }
+  .joystick-thumb { position: absolute; top: 31px; left: 31px; width: 48px; height: 48px; border: 1px solid #fff1b5bb; border-radius: 50%; background: linear-gradient(145deg, #ffe37add, #ffbf37bb); box-shadow: 0 3px 12px #0005; }
+  .fire-button { position: absolute; right: max(24px, calc(env(safe-area-inset-right) + 16px)); bottom: var(--control-bottom); pointer-events: auto; touch-action: none; }
+  .fire-button.pressed { background: #fff0ab; box-shadow: 0 0 28px #ffd34e66; transform: scale(.94); }
 }
 
 @media (max-height: 560px) and (min-width: 681px) {

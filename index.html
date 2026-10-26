@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#12151f" />
     <title>Golden Blast — Bad Bad Boy Arcade</title>
-    <link rel="stylesheet" href="./style.css?v=20261025-medkits1" />
+    <link rel="stylesheet" href="./style.css?v=20261026-joystick2" />
     <script type="importmap">
       {
         "imports": {
           "three": "./vendor/three-0.180.0/build/three.module.min.js",
           "three/addons/": "./vendor/three-0.180.0/examples/jsm/",
-          "game": "./game.js?v=20261025-medkits1",
+          "game": "./game.js?v=20261026-joystick1",
+          "./touch-controls.js": "./touch-controls.js?v=20261026-joystick1",
           "./hero.js": "./hero.js?v=20261025-medkits1",
           "./city.js": "./city.js?v=20261025-medkits1",
           "./enemies.js": "./enemies.js?v=20261025-medkits1",
@@ -41,6 +42,7 @@
           <h1>GOLDEN<br /><span>BLAST</span></h1>
           <p>Snails and slimes have taken over the block! Run through the streets, face your enemies, and let the golden stream fly.</p>
           <div class="keys"><kbd>↑ ↓</kbd><span>forward / back</span><kbd>← →</kbd><span>turn</span><kbd>SHIFT</kbd><span>fine aim</span><kbd>CLICK / SPACE</kbd><span>spray</span></div>
+          <p class="touch-instructions">Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap for nearby enemies; hold to reach farther.</p>
           <div id="load-status" class="load-status" role="status">Loading models…</div>
           <button id="start" class="primary-button" type="button" disabled>LOADING…</button>
           <button id="retry-load" class="primary-button" type="button" hidden>RETRY LOADING</button>
@@ -52,7 +54,7 @@
       <section id="end-screen" class="overlay hidden">
         <div class="card end-card">
           <div class="eyebrow">ROUND OVER</div>
-          <h2 id="end-title">CAUGHT!</h2>
+          <h2 id="end-title">WASTED</h2>
           <p>The crawlers have taken the square. Another round?</p>
           <div class="final-score">SCORE <strong id="final-score">0000</strong></div>
           <button id="restart" class="primary-button" type="button">PLAY AGAIN</button>
@@ -66,11 +68,11 @@
       </div>
       <div class="controls-hint"><span>↑ ↓</span> move <span>← →</span> turn <i>·</i> <span>SHIFT</span> fine aim <i>·</i> <span>CLICK / SPACE</span> tap near · hold far</div>
       <div class="mobile-controls" aria-label="Touch controls">
-        <div class="pad">
-          <button data-key="ArrowUp" aria-label="Move forward">▲</button>
-          <div><button data-key="ArrowLeft" aria-label="Turn left">◀</button><button data-key="ArrowDown" aria-label="Move backward">▼</button><button data-key="ArrowRight" aria-label="Turn right">▶</button></div>
+        <div id="joystick-zone" class="joystick-zone" aria-label="Drag to move and aim">
+          <div class="joystick-hint touch-control" aria-hidden="true">MOVE</div>
+          <div id="joystick" class="joystick" aria-hidden="true" hidden><div id="joystick-thumb" class="joystick-thumb"></div></div>
         </div>
-        <button id="mobile-fire" class="fire-button" aria-label="Spray">SPRAY</button>
+        <button id="mobile-fire" class="fire-button touch-control" type="button" aria-label="Spray">SPRAY</button>
       </div>
       <div id="toast" class="toast" aria-live="polite"></div>
     </main>

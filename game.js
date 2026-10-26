@@ -6,6 +6,7 @@ import { loadEnemyModels, createEnemy, animateEnemy, disposeEnemy } from './enem
 import { createLiquidStream } from './liquid.js';
 import { createBiteEffects } from './bites.js';
 import { createMedkits } from './medkits.js';
+import { createTouchControls } from './touch-controls.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
@@ -29,6 +30,13 @@ const finalScore = document.querySelector('#final-score');
 const toast = document.querySelector('#toast');
 const sprayRange = document.querySelector('#spray-range');
 const pressureFill = document.querySelector('#pressure-fill');
+const touchControls = createTouchControls({
+  zone: document.querySelector('#joystick-zone'),
+  stick: document.querySelector('#joystick'),
+  thumb: document.querySelector('#joystick-thumb'),
+  fireButton: document.querySelector('#mobile-fire'),
+  onFireStart: beginSpray
+});
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -268,8 +276,10 @@ function updateMovement(dt, firing) {
   const forward = Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'));
   const turn = Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft'));
   const usingArrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(key => keys.has(key));
-  const worldX = Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
-  const worldZ = Number(keys.has('KeyS')) - Number(keys.has('KeyW'));
+  const touch = touchControls.input;
+  const touchStrength = Math.hypot(touch.x, touch.z);
+  const worldX = touchStrength ? touch.x : Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
+  const worldZ = touchStrength ? touch.z : Number(keys.has('KeyS')) - Number(keys.has('KeyW'));
   const precise = keys.has('ShiftLeft') || keys.has('ShiftRight');
   const maxSpeed = player.speed * (precise ? 0.4 : firing ? 0.7 : 1);
   const turnRate = precise ? 0.65 : firing ? 1.7 : 3.2;
@@ -284,7 +294,7 @@ function updateMovement(dt, firing) {
     angleRemaining = Math.atan2(Math.sin(targetHeading - player.heading), Math.cos(targetHeading - player.heading));
     targetTurnSpeed = THREE.MathUtils.clamp(angleRemaining * 14, -turnRate * 2, turnRate * 2);
     // Finish facing the requested direction before accelerating into a U-turn.
-    throttle = Math.max(0, Math.cos(angleRemaining));
+    throttle = Math.max(0, Math.cos(angleRemaining)) * (touchStrength || 1);
   }
 
   if (targetTurnSpeed) {
@@ -319,7 +329,7 @@ function update(dt) {
   biteEffects.update(dt);
   if (!playing) return;
 
-  const firing = keys.has('Space') || keys.has('Fire') || player.tapTimer > 0;
+  const firing = keys.has('Space') || keys.has('Fire') || touchControls.input.firing || player.tapTimer > 0;
   const moving = updateMovement(dt, firing);
 
   player.root.position.set(player.x, 0, player.z);
@@ -461,6 +471,7 @@ function startGame() {
   medkits.reset(player);
   spawnWave(1);
   playing = true;
+  touchControls.setEnabled(true);
   startScreen.classList.add('hidden');
   endScreen.classList.add('hidden');
   keys.clear();
@@ -483,6 +494,7 @@ function clearArena() {
 
 function endGame() {
   playing = false;
+  touchControls.setEnabled(false);
   stream.clear();
   player.tapTimer = 0;
   player.moveSpeed = 0;
@@ -523,6 +535,9 @@ window.addEventListener('keydown', (event) => {
 });
 window.addEventListener('keyup', (event) => keys.delete(event.code));
 window.addEventListener('blur', () => { keys.clear(); player.tapTimer = 0; player.moveSpeed = 0; player.turnSpeed = 0; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { keys.clear(); player.tapTimer = 0; player.moveSpeed = 0; player.turnSpeed = 0; }
+});
 window.addEventListener('resize', resize);
 canvas.addEventListener('pointerdown', (event) => {
   if (event.pointerType === 'mouse' && event.button === 0 && playing) { keys.add('Fire'); beginSpray(); }
@@ -536,18 +551,6 @@ document.querySelector('#sound').addEventListener('click', (event) => {
   event.currentTarget.classList.toggle('sound-on', soundEnabled);
   if (soundEnabled) blip(520, 0.05);
 });
-
-for (const button of document.querySelectorAll('[data-key]')) {
-  const code = button.dataset.key;
-  button.addEventListener('pointerdown', (event) => { event.preventDefault(); keys.add(code); button.setPointerCapture(event.pointerId); });
-  const release = () => keys.delete(code);
-  button.addEventListener('pointerup', release);
-  button.addEventListener('pointercancel', release);
-  button.addEventListener('lostpointercapture', release);
-}
-const fireButton = document.querySelector('#mobile-fire');
-fireButton.addEventListener('pointerdown', (event) => { event.preventDefault(); keys.add('Fire'); beginSpray(); fireButton.setPointerCapture(event.pointerId); });
-for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) fireButton.addEventListener(name, () => keys.delete('Fire'));
 
 resize();
 loadModels();

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 server.py",
+    "test": "node --test",
     "prepare-model": "node scripts/prepare-model.mjs"
   },
   "devDependencies": {
