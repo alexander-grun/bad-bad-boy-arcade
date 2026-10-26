@@ -8,6 +8,7 @@ import { createBiteEffects } from './bites.js';
 import { createMedkits } from './medkits.js';
 import { createTouchControls } from './touch-controls.js';
 import { movePlayer } from './movement.js';
+import { createAimAssist } from './aim-assist.js';
 
 const MODEL_URL = './assets/bad-bad-boy.glb?v=20261025-opt1';
 // Match the map's third-floor windows rather than the sculpture's real size.
@@ -18,8 +19,10 @@ const CAMERA_DISTANCE = 12;
 const CAMERA_LOOK_HEIGHT = HERO_HEIGHT * 0.4;
 const keys = new Set();
 let controlMode = 'direct';
+let aimAssistEnabled = true;
 try {
   if (localStorage.getItem('golden-blast-controls') === 'tank') controlMode = 'tank';
+  aimAssistEnabled = localStorage.getItem('golden-blast-aim-assist') !== 'false';
 } catch { /* Settings still work when browser storage is unavailable. */ }
 
 const canvas = document.querySelector('#game');
@@ -112,6 +115,14 @@ const stream = createLiquidStream(scene, city, (enemy, direction) => {
 }, { scale: HERO_HEIGHT / 2.25, refraction: !window.matchMedia('(pointer: coarse)').matches });
 
 const enemies = [];
+const aimAssist = createAimAssist((origin, enemy) => city.lineClear(origin.x, origin.z, enemy.x, enemy.z, .12));
+const assistMarker = new THREE.Mesh(
+  new THREE.RingGeometry(.88, 1, 32),
+  new THREE.MeshBasicMaterial({ color: '#ffd34e', transparent: true, opacity: .85, depthWrite: false })
+);
+assistMarker.rotation.x = -Math.PI / 2;
+assistMarker.visible = false;
+scene.add(assistMarker);
 const effects = [];
 const biteEffects = createBiteEffects(scene);
 const medkits = createMedkits(scene, city);
@@ -283,7 +294,22 @@ function blip(frequency, duration) {
 }
 
 function updateMovement(dt, firing) {
-  return movePlayer(player, city, { keys, touch: touchControls.input, mode: controlMode, dt, firing, height: HERO_HEIGHT });
+  const assisted = controlMode === 'direct' && aimAssistEnabled && firing && !keys.has('ShiftLeft') && !keys.has('ShiftRight');
+  if (!assisted) resetAimAssist();
+  return movePlayer(player, city, {
+    keys, touch: touchControls.input, mode: controlMode, dt, firing, height: HERO_HEIGHT,
+    resolveAim: assisted ? resolveAssistedHeading : null
+  });
+}
+
+function resolveAssistedHeading(heading, dt) {
+  const target = aimAssist.update(player, heading, enemies, dt);
+  return target ? Math.atan2(target.x - player.x, target.z - player.z) : null;
+}
+
+function resetAimAssist() {
+  aimAssist.reset();
+  assistMarker.visible = false;
 }
 
 function update(dt) {
@@ -386,6 +412,12 @@ function update(dt) {
     }
   } else pendingWave = 0;
 
+  const assistedTarget = aimAssist.target;
+  assistMarker.visible = !!assistedTarget?.alive;
+  if (assistMarker.visible) {
+    assistMarker.position.set(assistedTarget.x, .025, assistedTarget.z);
+    assistMarker.scale.setScalar(assistedTarget.size + .18);
+  }
   camera.position.lerp(new THREE.Vector3(player.x, CAMERA_HEIGHT, player.z + CAMERA_DISTANCE), 1 - Math.exp(-2.5 * dt));
   // Pan with a fixed viewing angle so movement does not swing the aiming view.
   camera.lookAt(camera.position.x, CAMERA_LOOK_HEIGHT, camera.position.z - CAMERA_DISTANCE);
@@ -446,6 +478,7 @@ function startGame() {
 }
 
 function clearArena() {
+  resetAimAssist();
   stream.clear();
   biteEffects.clear();
   medkits.clear();
@@ -462,6 +495,7 @@ function clearArena() {
 
 function endGame() {
   playing = false;
+  resetAimAssist();
   controlsButton.hidden = true;
   touchControls.setEnabled(false);
   stream.clear();
@@ -497,6 +531,7 @@ function beginSpray() {
 }
 
 function resetInput() {
+  resetAimAssist();
   keys.clear();
   touchControls.reset();
   player.tapTimer = 0;
@@ -510,18 +545,31 @@ function resetInput() {
 function syncControlMode() {
   const direct = controlMode === 'direct';
   for (const radio of document.querySelectorAll('[data-control-mode]')) radio.checked = radio.value === controlMode;
+  for (const checkbox of document.querySelectorAll('[data-aim-assist]')) {
+    checkbox.checked = aimAssistEnabled;
+    checkbox.disabled = !direct;
+  }
   document.querySelector('#movement-description').textContent = direct ? 'move and aim' : 'forward/back · turn';
   document.querySelector('.controls-hint').textContent = direct
     ? 'ARROWS / WASD move · SHIFT + ← → fine aim · CLICK / SPACE spray · ESC pause'
     : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · SPACE spray · ESC pause';
   for (const hint of document.querySelectorAll('[data-keyboard-aim-hint]')) {
     hint.textContent = direct
-      ? 'Hold Shift + ← / → (or A / D) to aim at any angle. Shift + ↑ / ↓ moves slowly along your aim. Works while spraying.'
+      ? 'Hold Shift + ← / → (or A / D) for manual fine aim. Shift + ↑ / ↓ moves slowly along your aim. Shift overrides aim assist.'
       : 'Hold Shift for slower movement and precise steering. Release left/right to hold your aim.';
   }
   document.querySelector('.touch-instructions').textContent = direct
     ? 'Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap near, hold far.'
     : 'Drag up/down to move forward/back. Drag left/right to turn. Tap SPRAY near, hold far.';
+}
+
+for (const checkbox of document.querySelectorAll('[data-aim-assist]')) {
+  checkbox.addEventListener('change', () => {
+    aimAssistEnabled = checkbox.checked;
+    try { localStorage.setItem('golden-blast-aim-assist', String(aimAssistEnabled)); } catch { /* Storage is optional. */ }
+    resetInput();
+    syncControlMode();
+  });
 }
 
 for (const radio of document.querySelectorAll('[data-control-mode]')) {

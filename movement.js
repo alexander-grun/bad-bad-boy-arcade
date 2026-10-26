@@ -1,6 +1,6 @@
 const FINE_AIM_TURN_RATE = .65;
 
-export function movePlayer(player, city, { keys, touch, mode, dt, firing, height }) {
+export function movePlayer(player, city, { keys, touch, mode, dt, firing, height, resolveAim = null }) {
   const touchStrength = Math.hypot(touch.x, touch.z);
   const x = touchStrength ? touch.x : Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'));
   const z = touchStrength ? touch.z : Number(keys.has('KeyS') || keys.has('ArrowDown')) - Number(keys.has('KeyW') || keys.has('ArrowUp'));
@@ -37,7 +37,8 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
       player.targetHeading = Math.atan2(x, z);
       throttle = Math.min(1, length);
     }
-    const target = player.targetHeading ?? player.heading;
+    const requested = player.targetHeading ?? player.heading;
+    const target = resolveAim?.(requested, dt) ?? requested;
     const angle = Math.atan2(Math.sin(target - player.heading), Math.cos(target - player.heading));
     // Small corrections reach their exact angle in one frame. Larger turns
     // stay smooth and finish in finite time instead of trailing the input.
