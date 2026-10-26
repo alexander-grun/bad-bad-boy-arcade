@@ -46,6 +46,8 @@ button { font: inherit; }
 
 .game-shell { position: relative; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, #29263a, #11131b 70%); }
 #game { display: block; width: 100%; height: 100%; outline: 0; touch-action: none; }
+.hero-hp { position: absolute; left: 0; top: 0; width: 64px; height: 7px; overflow: hidden; border-radius: 9px; pointer-events: none; background: rgba(0,0,0,.5); box-shadow: 0 0 0 1px #ffffff40; }
+.hero-hp span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, #ff8b54, #ffd34e); transition: width .2s, background .2s; }
 
 .hud { position: absolute; z-index: 2; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: clamp(12px, 2.4vw, 32px); padding: 20px clamp(16px, 4vw, 54px); pointer-events: none; background: linear-gradient(180deg, rgba(10, 11, 17, .68), transparent); }
 .brand { margin-right: auto; color: var(--ink); font: 800 clamp(17px, 2vw, 24px)/1 "Barlow Condensed", sans-serif; letter-spacing: .13em; white-space: nowrap; }

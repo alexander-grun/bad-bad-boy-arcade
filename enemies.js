@@ -6,7 +6,7 @@ const templates = new Map();
 
 export async function loadEnemyModels() {
   const loader = new GLTFLoader();
-  await Promise.all(['slime', 'snail'].map(async kind => {
+  await Promise.all(['slime', 'slug'].map(async kind => {
     const gltf = await loader.loadAsync(`./assets/enemies/${kind}.glb`);
     templates.set(kind, gltf);
   }));
@@ -33,7 +33,7 @@ export function createEnemy(kind, level) {
     };
     node.material = Array.isArray(node.material) ? node.material.map(copyMaterial) : copyMaterial(node.material);
   });
-  // Slime's eyes face +X in its source; the snail's head faces +Z.
+  // Slime's eyes face +X in its source; the slug's head faces +Z.
   model.rotation.y = kind === 'slime' ? -Math.PI / 2 : 0;
   model.updateMatrixWorld(true);
   const bounds = new THREE.Box3().setFromObject(model);
@@ -53,8 +53,8 @@ export function createEnemy(kind, level) {
   return {
     root, body, model, kind, mixer, actions, state: 'walk', materials: [...materials.values()],
     size: radius, hitHeight: size.y * scale * 0.52, baseScale: scale,
-    hp: (kind === 'snail' ? 4 : 2) + Math.floor((level - 1) / 3),
-    speed: (kind === 'snail' ? 0.5 : 1.05) + Math.random() * 0.15 + Math.min(level, 12) * 0.035,
+    hp: (kind === 'slug' ? 4 : 2) + Math.floor((level - 1) / 3),
+    speed: (kind === 'slug' ? 0.5 : 1.05) + Math.random() * 0.15 + Math.min(level, 12) * 0.035,
     hit: 0, attack: Math.random() * 0.5, alive: true, wobble: Math.random() * Math.PI * 2,
   };
 }
@@ -69,7 +69,7 @@ export function animateEnemy(enemy, dt, time, attacking) {
     }
     enemy.mixer.update(dt * (attacking ? 1 : enemy.speed));
   } else {
-    // The snail keeps its textured shell; a subtle foot pulse suggests crawling.
+    // The slug has no shell; a subtle foot pulse suggests crawling.
     enemy.body.scale.z = enemy.baseScale * (1 + Math.sin(time * 5 + enemy.wobble) * 0.025);
     enemy.body.rotation.z = Math.sin(time * 3 + enemy.wobble) * 0.025;
   }

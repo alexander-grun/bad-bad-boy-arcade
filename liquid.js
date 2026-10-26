@@ -345,9 +345,14 @@ export function createLiquidStream(scene, city, onHit, { scale = 1, refraction =
     landingMarker.visible = false;
     for (const ripple of ripples) { ripple.age = 1; ripple.mesh.visible = false; }
   }
+  // Tints the stream and its droplets. Glow is the emissive colour.
+  function setTint(color, glow = '#000000') {
+    material.color.set(color);
+    material.emissive.set(glow);
+  }
   function resetPressure() {
     heldTime = 0;
     wasFiring = false;
   }
-  return { update, clear, resetPressure };
+  return { update, clear, resetPressure, setTint };
 }

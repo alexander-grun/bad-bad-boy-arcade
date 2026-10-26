@@ -32,6 +32,9 @@ const endScreen = document.querySelector('#end-screen');
 const startButton = document.querySelector('#start');
 const restartButton = document.querySelector('#restart');
 const healthFill = document.querySelector('#health-fill');
+const heroHp = document.querySelector('#hero-hp');
+const heroHpFill = document.querySelector('#hero-hp-fill');
+const heroHeadPosition = new THREE.Vector3();
 const scoreLabel = document.querySelector('#score');
 const waveLabel = document.querySelector('#wave');
 const finalScore = document.querySelector('#final-score');
@@ -98,6 +101,7 @@ const player = {
   speed: 3.6,
   radius: 0.32 * HERO_SCALE,
   invulnerable: 0,
+  powerTimer: 0,
   fireTimer: 0,
   tapTimer: 0,
   runTime: 0,
@@ -106,13 +110,17 @@ const player = {
 player.root.add(player.body);
 scene.add(player.root);
 
-const stream = createLiquidStream(scene, city, (enemy, direction) => {
+function hitEnemy(enemy, direction) {
   enemy.hp -= 2;
   enemy.hit = 0.18;
   city.move(enemy, direction.x * 0.38, direction.z * 0.38, enemy.size);
   enemy.root.position.set(enemy.x, 0, enemy.z);
   if (enemy.hp <= 0) removeEnemy(enemy, true);
-}, { scale: HERO_HEIGHT / 2.25, refraction: !window.matchMedia('(pointer: coarse)').matches });
+}
+const streamOptions = { scale: HERO_HEIGHT / 2.25, refraction: !window.matchMedia('(pointer: coarse)').matches };
+const stream = createLiquidStream(scene, city, hitEnemy, streamOptions);
+// Battery power adds two side streams that fan out from the centre stream.
+const sideStreams = [createLiquidStream(scene, city, hitEnemy, streamOptions), createLiquidStream(scene, city, hitEnemy, streamOptions)];
 
 const enemies = [];
 const aimAssist = createAimAssist((origin, enemy) => city.lineClear(origin.x, origin.z, enemy.x, enemy.z, .12));
@@ -126,6 +134,38 @@ scene.add(assistMarker);
 const effects = [];
 const biteEffects = createBiteEffects(scene);
 const medkits = createMedkits(scene, city);
+// Slugs sometimes drop a Battery. Walking over it turns the stream neon and splits it into three.
+const BATTERY_DROP_CHANCE = 0.3;
+const POWER_TIME = 8;
+const SPREAD_ANGLE = 0.22;
+const STREAM_COLOR = '#ffd34c';
+const POWER_COLOR = '#39ff14';
+const batteries = [];
+// Battery energy drink can: black body, gold label. The side carries the label; the ends are plain black.
+function makeCanLabel() {
+  const canvasLabel = document.createElement('canvas');
+  canvasLabel.width = 256;
+  canvasLabel.height = 128;
+  const ctx = canvasLabel.getContext('2d');
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, 256, 128);
+  ctx.fillStyle = '#e2b24a';
+  ctx.fillRect(0, 34, 256, 10);
+  ctx.fillRect(0, 84, 256, 10);
+  ctx.font = 'bold 42px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e2b24a';
+  ctx.fillText('BATTERY', 128, 64);
+  const texture = new THREE.CanvasTexture(canvasLabel);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+const batteryGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.34, 16);
+const canEnd = new THREE.MeshStandardMaterial({ color: '#111', roughness: 0.35, metalness: 0.4 });
+const batteryMaterials = [new THREE.MeshStandardMaterial({ map: makeCanLabel(), roughness: 0.35, metalness: 0.4 }), canEnd, canEnd];
+const spreadFacing = { dx: 0, dz: 0 };
+let spreadOn = false;
 let playing = false;
 let gameTime = 0;
 let score = 0;
@@ -183,7 +223,7 @@ async function loadHero() {
 
 async function loadModels() {
   try {
-    status.textContent = 'Loading the hero, slimes, and snails…';
+    status.textContent = 'Loading the hero, slimes, and Spanish slugs…';
     const [gltf] = await Promise.all([
       loadHero(),
       loadEnemyModels(),
@@ -219,7 +259,7 @@ function spawnWave(level) {
   const count = Math.min(3 + level * 2, 18);
   for (let i = 0; i < count; i++) {
     const point = city.spawnPoint(player, i, count);
-    makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'snail' : 'slime');
+    makeEnemy(point.x, point.z, level, i % 3 === 0 ? 'slug' : 'slime');
   }
   if (level > 1) showToast(`WAVE ${level}`);
 }
@@ -229,7 +269,8 @@ function removeEnemy(enemy, pop = false) {
   enemy.alive = false;
   disposeEnemy(enemy);
   if (pop) {
-    score += enemy.kind === 'snail' ? 150 : 100;
+    score += enemy.kind === 'slug' ? 150 : 100;
+    if (enemy.kind === 'slug' && Math.random() < BATTERY_DROP_CHANCE) dropBattery(enemy.x, enemy.z);
     scoreLabel.textContent = String(score).padStart(4, '0');
     burst(enemy.x, enemy.hitHeight, enemy.z, 0xffd34e, 10);
     blip(440 + Math.random() * 280, 0.045);
@@ -329,10 +370,13 @@ function update(dt) {
   player.body.rotation.x = 0.07 * player.runBlend * THREE.MathUtils.clamp(player.moveSpeed / player.speed, -1, 1);
   animateHero(player.rig, player.runTime, player.runBlend);
   medkits.update(dt, player, collectMedkit);
+  updateBatteries(dt);
 
   player.tapTimer = Math.max(0, player.tapTimer - dt);
   // Each parcel starts at the hands, then follows its own ballistic trajectory.
   const spray = stream.update(dt, firing, player.rig.emitter, player, enemies);
+  player.powerTimer = Math.max(0, player.powerTimer - dt);
+  updateSpread(dt, firing);
   pressureFill.style.transform = `scaleX(${spray.charge})`;
   sprayRange.textContent = spray.blocked ? 'BLOCKED' : `${spray.range.toFixed(1)} m`;
   player.fireTimer -= dt;
@@ -353,7 +397,7 @@ function update(dt) {
     enemy.root.rotation.y = Math.atan2(vx, vz);
     if (!attacking) {
       const direction = city.chase(enemy.x, enemy.z, player.x, player.z);
-      // Soft separation keeps a pack of snails from collapsing into one shell.
+      // Soft separation keeps a pack of slugs from collapsing into one blob.
       for (const other of enemies) {
         if (other === enemy || !other.alive) continue;
         const sx = enemy.x - other.x, sz = enemy.z - other.z;
@@ -373,7 +417,7 @@ function update(dt) {
     } else if (enemy.attack <= 0 && player.invulnerable <= 0) {
       player.hp--;
       player.invulnerable = 0.85;
-      enemy.attack = enemy.kind === 'snail' ? 1.2 : 0.85;
+      enemy.attack = enemy.kind === 'slug' ? 1.2 : 0.85;
       updateHealth();
       showBite(enemy);
       blip(115, 0.12);
@@ -427,6 +471,57 @@ function updateHealth() {
   const ratio = Math.max(0, player.hp / player.maxHp);
   healthFill.style.width = `${ratio * 100}%`;
   healthFill.style.background = ratio < 0.4 ? 'linear-gradient(90deg, #f04559, #ff7952)' : 'linear-gradient(90deg, #ff8b54, #ffd34e)';
+  heroHpFill.style.width = `${ratio * 100}%`;
+}
+
+// Keeps the hero's HP bar above his head on screen. Hidden when he is off screen.
+function updateHeroHp() {
+  heroHeadPosition.set(player.x, HERO_HEIGHT + 0.5, player.z).project(camera);
+  const onScreen = playing && heroHeadPosition.z < 1;
+  heroHp.hidden = !onScreen;
+  if (!onScreen) return;
+  const shell = heroHp.offsetParent.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect();
+  const x = rect.left - shell.left + (heroHeadPosition.x * 0.5 + 0.5) * rect.width;
+  const y = rect.top - shell.top + (-heroHeadPosition.y * 0.5 + 0.5) * rect.height;
+  heroHp.style.transform = `translate(${x - 32}px, ${y}px)`;
+}
+
+function dropBattery(x, z) {
+  const mesh = new THREE.Mesh(batteryGeometry, batteryMaterials);
+  mesh.position.set(x, 0.3, z);
+  scene.add(mesh);
+  batteries.push({ x, z, mesh });
+}
+
+function updateBatteries(dt) {
+  for (let i = batteries.length - 1; i >= 0; i--) {
+    const battery = batteries[i];
+    battery.mesh.rotation.y += dt * 2;
+    if (Math.hypot(player.x - battery.x, player.z - battery.z) > player.radius + 0.4) continue;
+    scene.remove(battery.mesh);
+    batteries.splice(i, 1);
+    player.powerTimer = POWER_TIME;
+    showToast('BATTERY POWER!');
+    blip(880, .15);
+  }
+}
+
+function updateSpread(dt, firing) {
+  const powered = player.powerTimer > 0;
+  if (powered !== spreadOn) {
+    spreadOn = powered;
+    for (const s of [stream, ...sideStreams]) s.setTint(powered ? POWER_COLOR : STREAM_COLOR, powered ? POWER_COLOR : undefined);
+    if (!powered) for (const side of sideStreams) side.clear();
+  }
+  if (!powered) return;
+  sideStreams.forEach((side, i) => {
+    const angle = (i ? 1 : -1) * SPREAD_ANGLE;
+    const c = Math.cos(angle), s = Math.sin(angle);
+    spreadFacing.dx = player.dx * c - player.dz * s;
+    spreadFacing.dz = player.dx * s + player.dz * c;
+    side.update(dt, firing, player.rig.emitter, spreadFacing, enemies);
+  });
 }
 
 function collectMedkit(amount) {
@@ -483,6 +578,10 @@ function clearArena() {
   biteEffects.clear();
   medkits.clear();
   player.tapTimer = 0;
+  player.powerTimer = 0;
+  for (const side of sideStreams) side.clear();
+  for (const battery of batteries) scene.remove(battery.mesh);
+  batteries.length = 0;
   for (const enemy of enemies) disposeEnemy(enemy);
   for (const effect of effects) {
     scene.remove(effect.object);
@@ -523,6 +622,7 @@ function animate(now) {
   update(dt);
   if (player.model) city.updateVisibility(camera, player.root, HERO_HEIGHT, dt);
   renderer.render(scene, camera);
+  updateHeroHp();
 }
 
 function beginSpray() {
