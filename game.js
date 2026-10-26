@@ -512,8 +512,13 @@ function syncControlMode() {
   for (const radio of document.querySelectorAll('[data-control-mode]')) radio.checked = radio.value === controlMode;
   document.querySelector('#movement-description').textContent = direct ? 'move and aim' : 'forward/back · turn';
   document.querySelector('.controls-hint').textContent = direct
-    ? 'ARROWS / WASD move · SHIFT slow · CLICK / SPACE spray · ESC pause'
+    ? 'ARROWS / WASD move · SHIFT + ← → fine aim · CLICK / SPACE spray · ESC pause'
     : '↑ ↓ / W S forward/back · ← → / A D turn · SHIFT fine aim · SPACE spray · ESC pause';
+  for (const hint of document.querySelectorAll('[data-keyboard-aim-hint]')) {
+    hint.textContent = direct
+      ? 'Hold Shift + ← / → (or A / D) to aim at any angle. Shift + ↑ / ↓ moves slowly along your aim. Works while spraying.'
+      : 'Hold Shift for slower movement and precise steering. Release left/right to hold your aim.';
+  }
   document.querySelector('.touch-instructions').textContent = direct
     ? 'Drag on the left to move and aim. Hold SPRAY on the right to fire. Tap near, hold far.'
     : 'Drag up/down to move forward/back. Drag left/right to turn. Tap SPRAY near, hold far.';

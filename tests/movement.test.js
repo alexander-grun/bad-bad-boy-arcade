@@ -100,6 +100,70 @@ test('direct joystick preserves analog speed and takes priority over keyboard in
   assert.ok(Math.abs(slow.player.z) < 1e-10);
 });
 
+test('Shift gives Direct keyboard controls precise rotation at arbitrary angles while spraying', () => {
+  for (const [code, direction] of [['ArrowRight', -1], ['KeyD', -1], ['ArrowLeft', 1], ['KeyA', 1]]) {
+    const { player, step } = setup({ codes: ['ShiftLeft', code], firing: true });
+    step(30);
+    assert.ok(Math.abs(player.heading - direction * .325) < 1e-10);
+    assert.equal(player.x, 0);
+    assert.equal(player.z, 0);
+    assert.equal(player.dx, Math.sin(player.heading));
+    assert.equal(player.dz, Math.cos(player.heading));
+  }
+});
+
+test('releasing fine-aim keys preserves the exact chosen angle without snapping to a movement direction', () => {
+  const { player, input, step } = setup({ heading: Math.PI, codes: ['ShiftRight', 'ArrowRight'] });
+  step(17);
+  const heading = player.heading;
+  input.keys.delete('ArrowRight');
+  step(20);
+  input.keys.clear();
+  step(60);
+  assert.ok(Math.abs(player.heading - heading) < 1e-10);
+  assert.equal(player.x, 0);
+  assert.equal(player.z, 0);
+});
+
+test('entering fine aim stops travel and cancels any unfinished automatic turn', () => {
+  const { player, input, step } = setup({ codes: ['ArrowUp'] });
+  step(3);
+  assert.ok(player.moveSpeed > 0);
+  assert.ok(Math.abs(player.heading - Math.PI) > .1);
+  const before = { x: player.x, z: player.z, heading: player.heading };
+  input.keys = new Set(['ShiftLeft']);
+  step(60);
+  assert.equal(player.moveSpeed, 0);
+  assert.equal(player.x, before.x);
+  assert.equal(player.z, before.z);
+  assert.ok(Math.abs(player.heading - before.heading) < 1e-10);
+});
+
+test('Shift up/down repositions slowly along the chosen aim without changing it', () => {
+  for (const [code, direction] of [['ArrowUp', 1], ['ArrowDown', -1], ['KeyW', 1], ['KeyS', -1]]) {
+    const heading = .37;
+    const { player, step } = setup({ heading, codes: ['ShiftLeft', code] });
+    step(60);
+    assert.ok(Math.abs(player.heading - heading) < 1e-10);
+    assert.ok(direction * (player.x * Math.sin(heading) + player.z * Math.cos(heading)) > 0);
+    assert.ok(Math.abs(player.moveSpeed) <= player.speed * .4);
+  }
+});
+
+test('releasing Shift restores normal directional movement and fine aim is frame-rate independent', () => {
+  for (const fps of [30, 60, 120]) {
+    const { player, input, step } = setup({ codes: ['ShiftLeft', 'ArrowRight'] });
+    input.dt = 1 / fps;
+    step(fps);
+    assert.ok(Math.abs(player.heading + .65) < 1e-10);
+    input.keys.delete('ShiftLeft');
+    step();
+    assert.ok(player.x > 0);
+    assert.equal(player.moveX, 1);
+    assert.equal(player.moveZ, 0);
+  }
+});
+
 test('tank controls turn in place and back up without changing the facing direction', () => {
   const turn = setup({ mode: 'tank', codes: ['ArrowRight'] });
   turn.step(30);

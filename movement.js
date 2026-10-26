@@ -1,3 +1,5 @@
+const FINE_AIM_TURN_RATE = .65;
+
 export function movePlayer(player, city, { keys, touch, mode, dt, firing, height }) {
   const touchStrength = Math.hypot(touch.x, touch.z);
   const x = touchStrength ? touch.x : Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'));
@@ -6,9 +8,19 @@ export function movePlayer(player, city, { keys, touch, mode, dt, firing, height
   const maxSpeed = player.speed * (precise ? 0.4 : firing ? 0.7 : 1);
   let throttle = 0;
 
-  if (mode === 'tank') {
+  if (mode === 'direct' && precise && !touchStrength) {
+    // Shift temporarily gives keyboard players continuous aim between the
+    // eight movement directions. Releasing it keeps the chosen angle.
+    player.heading -= x * FINE_AIM_TURN_RATE * dt;
+    player.targetHeading = player.heading;
+    player.moveX = Math.sin(player.heading);
+    player.moveZ = Math.cos(player.heading);
+    player.turnSpeed = 0;
     throttle = -z;
-    const turnRate = precise ? 0.65 : firing ? 1.7 : 3.2;
+    if (!throttle) player.moveSpeed = 0;
+  } else if (mode === 'tank') {
+    throttle = -z;
+    const turnRate = precise ? FINE_AIM_TURN_RATE : firing ? 1.7 : 3.2;
     const targetTurnSpeed = -x * turnRate;
     if (targetTurnSpeed) {
       const decay = Math.exp(-18 * dt);
